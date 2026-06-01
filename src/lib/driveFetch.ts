@@ -30,6 +30,10 @@ export interface DriveFetchResult {
   data?: Buffer;
   filename?: string;
   mimeType?: string;
+  /** Drive folder ID of the fetched file's parent. Used to auto-fill the
+      PDF upload destination so users don't have to paste the same folder
+      URL twice. */
+  parentFolderId?: string;
   error?: string;
   errorType?: DriveErrorType;
 }
@@ -158,8 +162,8 @@ async function exportGoogleSheetAsXlsx(
   id: string,
   accessToken: string
 ): Promise<DriveFetchResult> {
-  // 1) Confirm access + grab the real filename
-  const metaUrl = `https://www.googleapis.com/drive/v3/files/${id}?fields=name,mimeType,trashed&supportsAllDrives=true`;
+  // 1) Confirm access + grab the real filename + parent folder
+  const metaUrl = `https://www.googleapis.com/drive/v3/files/${id}?fields=name,mimeType,trashed,parents&supportsAllDrives=true`;
   const metaResp = await fetch(metaUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -192,7 +196,13 @@ async function exportGoogleSheetAsXlsx(
   const buf = Buffer.from(await dlResp.arrayBuffer());
   const filename = ensureExtension(meta.name || `sheet_${id}`, ".xlsx");
 
-  return { ok: true, data: buf, filename, mimeType: XLSX_MIME };
+  return {
+    ok: true,
+    data: buf,
+    filename,
+    mimeType: XLSX_MIME,
+    parentFolderId: meta.parents?.[0],
+  };
 }
 
 export async function fetchDriveFile(
@@ -232,14 +242,15 @@ interface DriveMetadata {
   mimeType?: string;
   size?: string;
   trashed?: boolean;
+  parents?: string[];
 }
 
 async function fetchViaDriveApi(
   id: string,
   accessToken: string
 ): Promise<DriveFetchResult> {
-  // 1) Get metadata first — confirms access and gives us the real filename
-  const metaUrl = `https://www.googleapis.com/drive/v3/files/${id}?fields=name,mimeType,size,trashed&supportsAllDrives=true`;
+  // 1) Get metadata first — confirms access and gives us the real filename + parent folder
+  const metaUrl = `https://www.googleapis.com/drive/v3/files/${id}?fields=name,mimeType,size,trashed,parents&supportsAllDrives=true`;
   const metaResp = await fetch(metaUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -265,7 +276,13 @@ async function fetchViaDriveApi(
     if (expResp.ok) {
       const buf = Buffer.from(await expResp.arrayBuffer());
       const filename = ensureExtension(rawName, ".ipynb");
-      return { ok: true, data: buf, filename, mimeType: "application/json" };
+      return {
+        ok: true,
+        data: buf,
+        filename,
+        mimeType: "application/json",
+        parentFolderId: meta.parents?.[0],
+      };
     }
     // fall through to alt=media — Drive sometimes lets us download directly
   }
@@ -287,7 +304,13 @@ async function fetchViaDriveApi(
     filename = ensureExtension(filename, ".ipynb");
   }
 
-  return { ok: true, data: buf, filename, mimeType };
+  return {
+    ok: true,
+    data: buf,
+    filename,
+    mimeType,
+    parentFolderId: meta.parents?.[0],
+  };
 }
 
 function mapDriveApiError(status: number, body: string): DriveFetchResult {

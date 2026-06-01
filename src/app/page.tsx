@@ -42,8 +42,12 @@ export default function Home() {
     setCategory(cat);
   };
 
-  /** Fetch an xlsx/Google Sheet from a Drive link and return it as a File. */
-  const fetchSheetFromUrl = async (link: string): Promise<File> => {
+  /** Fetch an xlsx/Google Sheet from a Drive link and return it as a File +
+   *  the ID of the Drive folder the sheet lives in (so we can default the
+   *  PDF upload destination to that same folder). */
+  const fetchSheetFromUrl = async (
+    link: string
+  ): Promise<{ file: File; parentFolderId: string | null }> => {
     const response = await fetch("/api/fetch-sheet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -58,11 +62,12 @@ export default function Home() {
     const binary = atob(data.contentBase64);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new File([bytes], data.filename || "drive_sheet.xlsx", {
+    const file = new File([bytes], data.filename || "drive_sheet.xlsx", {
       type:
         data.mimeType ||
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
+    return { file, parentFolderId: data.parentFolderId || null };
   };
 
   const isFolderUrl = (url: string) =>
@@ -108,13 +113,18 @@ export default function Home() {
         chosen.kind === "google-sheet"
           ? `https://docs.google.com/spreadsheets/d/${chosen.id}/edit`
           : `https://drive.google.com/file/d/${chosen.id}/view`;
-      const file = await fetchSheetFromUrl(sheetUrl);
+      const { file } = await fetchSheetFromUrl(sheetUrl);
+      // PDFs go into the user-pasted folder.
       return { file, folderUrl: link, sheetUrl };
     }
 
-    // Direct sheet/xlsx link
-    const file = await fetchSheetFromUrl(link);
-    return { file, folderUrl: null, sheetUrl: link };
+    // Direct sheet/xlsx link — fetch the sheet AND look up its parent folder
+    // so PDFs land in the same Drive folder the sheet lives in.
+    const { file, parentFolderId } = await fetchSheetFromUrl(link);
+    const folderUrl = parentFolderId
+      ? `https://drive.google.com/drive/folders/${parentFolderId}`
+      : null;
+    return { file, folderUrl, sheetUrl: link };
   };
 
   // ----- Decide drive-sheet vs files mode on the client by peeking at xlsx -----

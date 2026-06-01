@@ -64,6 +64,9 @@ export async function POST(request: NextRequest) {
       mimeType: fetched.mimeType,
       contentBase64: fetched.data.toString("base64"),
       size: fetched.data.length,
+      // Lets the client auto-fill the PDF upload destination with the same
+      // folder the sheet lives in — no separate folder URL needed.
+      parentFolderId: fetched.parentFolderId,
     });
     if (refreshedCookie) attachRefreshedCookie(resp, refreshedCookie);
     return resp;
