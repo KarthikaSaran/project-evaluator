@@ -23,9 +23,12 @@ export interface DriveSheetColumns {
   scoreCol: string;
   /** Header name we'll use for the Report Link column. */
   reportLinkCol: string;
+  /** Header name we'll use for the Emailed column. */
+  emailedCol: string;
   statusColIsNew: boolean;
   scoreColIsNew: boolean;
   reportLinkColIsNew: boolean;
+  emailedColIsNew: boolean;
 }
 
 export interface DriveSheetRow {
@@ -159,6 +162,9 @@ export function parseDriveSheet(buffer: ArrayBuffer): ParsedDriveSheet {
   const existingReportLink = headers.find((h) =>
     /report\s*link|pdf\s*link|report\s*url/i.test(h)
   );
+  const existingEmailed = headers.find((h) =>
+    /^emailed$|email\s*status|email\s*sent/i.test(h)
+  );
 
   const columns: DriveSheetColumns = {
     linkCol,
@@ -167,9 +173,11 @@ export function parseDriveSheet(buffer: ArrayBuffer): ParsedDriveSheet {
     statusCol: existingStatus || "Status",
     scoreCol: existingScore || "Score",
     reportLinkCol: existingReportLink || "Report Link",
+    emailedCol: existingEmailed || "Emailed",
     statusColIsNew: !existingStatus,
     scoreColIsNew: !existingScore,
     reportLinkColIsNew: !existingReportLink,
+    emailedColIsNew: !existingEmailed,
   };
 
   // --- Build per-row spec ---------------------------------------------------
@@ -219,6 +227,7 @@ export interface RowUpdate {
   status: string;
   score?: string; // formatted like "87%"
   reportLink?: string;
+  emailed?: string;
 }
 
 /**
@@ -242,12 +251,14 @@ export function buildUpdatedWorkbook(
     if (!(columns.statusCol in newRow)) newRow[columns.statusCol] = "";
     if (!(columns.reportLinkCol in newRow))
       newRow[columns.reportLinkCol] = "";
+    if (!(columns.emailedCol in newRow)) newRow[columns.emailedCol] = "";
 
     if (u) {
       newRow[columns.statusCol] = u.status;
       if (u.score !== undefined) newRow[columns.scoreCol] = u.score;
       if (u.reportLink !== undefined)
         newRow[columns.reportLinkCol] = u.reportLink;
+      if (u.emailed !== undefined) newRow[columns.emailedCol] = u.emailed;
     }
     return newRow;
   });
@@ -261,6 +272,9 @@ export function buildUpdatedWorkbook(
   }
   if (!finalHeaders.includes(columns.reportLinkCol)) {
     finalHeaders.push(columns.reportLinkCol);
+  }
+  if (!finalHeaders.includes(columns.emailedCol)) {
+    finalHeaders.push(columns.emailedCol);
   }
 
   const newSheet = XLSX.utils.json_to_sheet(updatedRows, {
@@ -292,12 +306,15 @@ export function computeSheetUpdateColumns(parsed: ParsedDriveSheet): {
   statusColIdx: number;
   scoreColIdx: number;
   reportLinkColIdx: number;
+  emailedColIdx: number;
   statusIsNew: boolean;
   scoreIsNew: boolean;
   reportLinkIsNew: boolean;
+  emailedIsNew: boolean;
   statusHeader: string;
   scoreHeader: string;
   reportLinkHeader: string;
+  emailedHeader: string;
 } {
   const { headers, columns } = parsed;
   let cursor = headers.length;
@@ -305,6 +322,7 @@ export function computeSheetUpdateColumns(parsed: ParsedDriveSheet): {
   const statusIsNew = columns.statusColIsNew;
   const scoreIsNew = columns.scoreColIsNew;
   const reportLinkIsNew = columns.reportLinkColIsNew;
+  const emailedIsNew = columns.emailedColIsNew;
 
   const statusColIdx = statusIsNew
     ? cursor++
@@ -315,17 +333,23 @@ export function computeSheetUpdateColumns(parsed: ParsedDriveSheet): {
   const reportLinkColIdx = reportLinkIsNew
     ? cursor++
     : headers.indexOf(columns.reportLinkCol);
+  const emailedColIdx = emailedIsNew
+    ? cursor++
+    : headers.indexOf(columns.emailedCol);
 
   return {
     statusColIdx,
     scoreColIdx,
     reportLinkColIdx,
+    emailedColIdx,
     statusIsNew,
     scoreIsNew,
     reportLinkIsNew,
+    emailedIsNew,
     statusHeader: columns.statusCol,
     scoreHeader: columns.scoreCol,
     reportLinkHeader: columns.reportLinkCol,
+    emailedHeader: columns.emailedCol,
   };
 }
 

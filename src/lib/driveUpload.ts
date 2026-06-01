@@ -192,6 +192,7 @@ export interface SheetUpdate {
   status: string;
   score?: string;
   reportLink?: string;
+  emailed?: string;
 }
 
 export interface SheetUpdateColumns {
@@ -199,14 +200,17 @@ export interface SheetUpdateColumns {
   statusColIdx: number;
   scoreColIdx: number;
   reportLinkColIdx: number;
+  emailedColIdx: number;
   /** Whether each column needed to be appended (and so its header row needs writing). */
   statusIsNew: boolean;
   scoreIsNew: boolean;
   reportLinkIsNew: boolean;
+  emailedIsNew: boolean;
   /** Final header text for new columns. */
   statusHeader: string;
   scoreHeader: string;
   reportLinkHeader: string;
+  emailedHeader: string;
 }
 
 async function getFirstSheetName(
@@ -261,6 +265,12 @@ export async function updateGoogleSheet(
       values: [[cols.reportLinkHeader]],
     });
   }
+  if (cols.emailedIsNew) {
+    valueRanges.push({
+      range: `${tabRef}!${columnLetter(cols.emailedColIdx)}1`,
+      values: [[cols.emailedHeader]],
+    });
+  }
 
   // Write the per-row cells
   for (const u of updates) {
@@ -279,6 +289,12 @@ export async function updateGoogleSheet(
       valueRanges.push({
         range: `${tabRef}!${columnLetter(cols.reportLinkColIdx)}${sheetRow}`,
         values: [[u.reportLink]],
+      });
+    }
+    if (u.emailed !== undefined) {
+      valueRanges.push({
+        range: `${tabRef}!${columnLetter(cols.emailedColIdx)}${sheetRow}`,
+        values: [[u.emailed]],
       });
     }
   }

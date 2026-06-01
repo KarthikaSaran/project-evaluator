@@ -43,6 +43,9 @@ interface RowProgress {
   scorePct?: number;
   reportLink?: string;
   uploadError?: string;
+  /** Email-send outcome: "Sent" | "Failed - reason" | "No email" | undefined */
+  emailed?: string;
+  emailFailed?: boolean;
   error?: string;
 }
 
@@ -69,6 +72,8 @@ export default function DriveSheetMode({
 
   // PDF upload to Drive — optional
   const [folderUrl, setFolderUrl] = useState("");
+  // Email submitters their report — optional
+  const [emailReports, setEmailReports] = useState(false);
   const [sheetUpdateStatus, setSheetUpdateStatus] = useState<
     "idle" | "running" | "ok" | "error"
   >("idle");
@@ -122,6 +127,7 @@ export default function DriveSheetMode({
     setPhase("evaluating");
 
     const wantsDriveUpload = folderUrl.trim().length > 0;
+    const wantsEmail = emailReports;
 
     const newResults: EvaluationResult[] = [];
     const updated: RowProgress[] = rowProgress.map((r) => ({ ...r }));
@@ -177,22 +183,28 @@ export default function DriveSheetMode({
             // PDF generation failed — sheet still gets Status/Score
           }
 
-          if (wantsDriveUpload && pdfBlob) {
+          // We may need the base64 PDF for both upload and email — compute once.
+          let pdfBase64: string | null = null;
+          let pdfFilenameBase = "";
+          if (pdfBlob && (wantsDriveUpload || wantsEmail)) {
+            pdfFilenameBase = reportFilenameBase(
+              row.email,
+              row.identifier,
+              row.rowIndex
+            );
+            pdfBase64 = await blobToBase64(pdfBlob);
+          }
+
+          if (wantsDriveUpload && pdfBlob && pdfBase64) {
             try {
-              const filenameBase = reportFilenameBase(
-                row.email,
-                row.identifier,
-                row.rowIndex
-              );
-              const filename = `${filenameBase}.pdf`;
-              const base64 = await blobToBase64(pdfBlob);
+              const filename = `${pdfFilenameBase}.pdf`;
               const upResp = await fetch("/api/drive/upload-pdf", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   folderUrl: folderUrl.trim(),
                   filename,
-                  pdfBase64: base64,
+                  pdfBase64,
                 }),
               });
               const upData = await upResp.json();
@@ -213,6 +225,62 @@ export default function DriveSheetMode({
                 uploadError:
                   e instanceof Error ? e.message : "Upload failed",
               };
+            }
+            setRowProgress([...updated]);
+          }
+
+          if (wantsEmail) {
+            if (!row.email) {
+              updated[i] = {
+                ...updated[i],
+                emailed: "No email in row",
+                emailFailed: true,
+              };
+            } else if (!pdfBase64) {
+              updated[i] = {
+                ...updated[i],
+                emailed: "No PDF available",
+                emailFailed: true,
+              };
+            } else {
+              try {
+                const emResp = await fetch("/api/email/send-report", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    toEmail: row.email,
+                    pdfBase64,
+                    pdfFilename: `${pdfFilenameBase}.pdf`,
+                    context: {
+                      projectName: result.detectedProject || "Your Project",
+                      percentage: result.percentageScore,
+                      rating: result.overallRating,
+                    },
+                  }),
+                });
+                const emData = await emResp.json();
+                if (emData.ok) {
+                  updated[i] = {
+                    ...updated[i],
+                    emailed: "Sent",
+                    emailFailed: false,
+                  };
+                } else {
+                  updated[i] = {
+                    ...updated[i],
+                    emailed: shortenError(emData.error || "Email failed"),
+                    emailFailed: true,
+                  };
+                }
+              } catch (e) {
+                updated[i] = {
+                  ...updated[i],
+                  emailed: shortenError(
+                    e instanceof Error ? e.message : "Email failed"
+                  ),
+                  emailFailed: true,
+                };
+              }
             }
             setRowProgress([...updated]);
           }
@@ -261,6 +329,7 @@ export default function DriveSheetMode({
           status: r.status,
           score: r.score,
           reportLink: r.reportLink,
+          emailed: r.emailed,
         }));
 
       // Only generate a downloadable xlsx for uploaded files (for Google
@@ -324,6 +393,7 @@ export default function DriveSheetMode({
           status: r.status,
           score: r.score,
           reportLink: r.reportLink,
+          emailed: r.emailed,
         }));
 
       if (updates.length === 0) {
@@ -394,6 +464,7 @@ export default function DriveSheetMode({
     setUpdatedXlsxBlob(null);
     setZipBlob(null);
     setFolderUrl("");
+    setEmailReports(false);
     setSheetUpdateStatus("idle");
     setSheetUpdateError(null);
     previewedRef.current = false;
@@ -412,6 +483,12 @@ export default function DriveSheetMode({
   const failedCount = rowProgress.filter((r) => r.state === "failed").length;
   const uploadedCount = rowProgress.filter((r) => r.reportLink).length;
   const uploadErrorCount = rowProgress.filter((r) => r.uploadError).length;
+  const emailedCount = rowProgress.filter(
+    (r) => r.emailed === "Sent"
+  ).length;
+  const emailErrorCount = rowProgress.filter(
+    (r) => r.emailFailed
+  ).length;
 
   const isGoogleSheetSource = sourceMeta?.kind === "google-sheet";
   const wantsDriveUpload = folderUrl.trim().length > 0;
@@ -561,7 +638,55 @@ export default function DriveSheetMode({
                   )}
                 </div>
 
-                <RowList rows={rowProgress} />
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-3">
+                  <h3 className="font-semibold text-gray-800">
+                    Email PDF reports to submitters{" "}
+                    <span className="text-xs font-normal text-gray-400">
+                      (optional)
+                    </span>
+                  </h3>
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={emailReports}
+                      onChange={(e) => setEmailReports(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 accent-blue-600 cursor-pointer"
+                    />
+                    <span className="text-sm text-gray-700">
+                      After each successful evaluation, email the PDF report
+                      to the submitter&apos;s address from the sheet&apos;s
+                      email column.{" "}
+                      <span className="text-gray-400">
+                        Email is sent from your signed-in Google account; the
+                        recipient sees it as coming from you.
+                      </span>
+                    </span>
+                  </label>
+                  {emailReports && (
+                    <ul className="text-xs text-gray-500 ml-7 space-y-1">
+                      <li>
+                        Detected email column:{" "}
+                        <span className="font-medium text-gray-700">
+                          {parsed.columns.emailCol || "(none — rows without email will be skipped)"}
+                        </span>
+                      </li>
+                      <li>
+                        Subject: <em>Your Project Evaluation Report — {`{project name}`}</em>
+                      </li>
+                      <li>
+                        Attachment: the same PDF that goes to the Drive folder
+                        (named after the submitter&apos;s email).
+                      </li>
+                    </ul>
+                  )}
+                  {emailReports && !authStatus?.signedIn && (
+                    <p className="text-xs text-amber-700">
+                      Sign in with Google to enable email sending.
+                    </p>
+                  )}
+                </div>
+
+                <RowList rows={rowProgress} emailEnabled={emailReports} />
 
                 {error && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-4">
@@ -596,6 +721,7 @@ export default function DriveSheetMode({
                       {wantsDriveUpload && (
                         <> · {uploadedCount} uploaded</>
                       )}
+                      {emailReports && <> · {emailedCount} emailed</>}
                     </div>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
@@ -618,7 +744,7 @@ export default function DriveSheetMode({
                   )}
                 </div>
 
-                <RowList rows={rowProgress} />
+                <RowList rows={rowProgress} emailEnabled={emailReports} />
               </>
             )}
 
@@ -643,6 +769,13 @@ export default function DriveSheetMode({
                         tone={
                           uploadErrorCount > 0 ? "danger" : "success"
                         }
+                      />
+                    )}
+                    {emailReports && (
+                      <StatTile
+                        label="Emails sent"
+                        value={emailedCount}
+                        tone={emailErrorCount > 0 ? "danger" : "success"}
                       />
                     )}
                   </div>
@@ -724,6 +857,11 @@ export default function DriveSheetMode({
 
 // ----------------------------------------------------------------- helpers
 
+function shortenError(s: string): string {
+  const trimmed = s.replace(/\s+/g, " ").trim();
+  return trimmed.length > 80 ? trimmed.slice(0, 77) + "..." : trimmed;
+}
+
 async function blobToBase64(blob: Blob): Promise<string> {
   const buf = await blob.arrayBuffer();
   let binary = "";
@@ -793,7 +931,13 @@ function StatTile({
   );
 }
 
-function RowList({ rows }: { rows: RowProgress[] }) {
+function RowList({
+  rows,
+  emailEnabled = false,
+}: {
+  rows: RowProgress[];
+  emailEnabled?: boolean;
+}) {
   if (rows.length === 0) return null;
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
@@ -816,6 +960,11 @@ function RowList({ rows }: { rows: RowProgress[] }) {
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600 uppercase">
                 Report
               </th>
+              {emailEnabled && (
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600 uppercase">
+                  Email
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -862,6 +1011,24 @@ function RowList({ rows }: { rows: RowProgress[] }) {
                     <span className="text-gray-300">—</span>
                   )}
                 </td>
+                {emailEnabled && (
+                  <td className="px-4 py-2 text-xs">
+                    {r.emailed === "Sent" ? (
+                      <span className="inline-flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
+                        ✓ Sent
+                      </span>
+                    ) : r.emailed ? (
+                      <span
+                        className="inline-flex items-center gap-1 text-red-700 bg-red-50 px-2 py-0.5 rounded-full truncate max-w-[200px]"
+                        title={r.emailed}
+                      >
+                        {r.emailed}
+                      </span>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

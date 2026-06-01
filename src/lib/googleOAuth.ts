@@ -20,6 +20,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/drive.readonly", // read submission files
   "https://www.googleapis.com/auth/drive.file", // create/overwrite report PDFs we upload
   "https://www.googleapis.com/auth/spreadsheets", // update source Google Sheet in place
+  "https://www.googleapis.com/auth/gmail.send", // email PDF reports to submitters
   "openid",
   "email",
 ].join(" ");
