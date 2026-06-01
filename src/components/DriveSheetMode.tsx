@@ -467,6 +467,36 @@ export default function DriveSheetMode({
     }
   };
 
+  /** Inline-download fallback: generate the PDF for one row's result and
+      trigger a browser download. Used when there's no Drive folder set or
+      the Drive upload failed — gives the user a way to actually see the
+      report instead of a dead "—" in the Report column. */
+  const handleDownloadRowPdf = async (row: RowProgress) => {
+    if (!row.result) return;
+    try {
+      const pdfResp = await fetch("/api/generate-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ result: row.result }),
+      });
+      if (!pdfResp.ok) throw new Error("PDF generation failed");
+      const pdfBlob = await pdfResp.blob();
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      const name = reportFilenameBase(row.email, row.identifier, row.rowIndex);
+      a.download = `${name}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not generate PDF for download"
+      );
+    }
+  };
+
   const handleReset = () => {
     setFiles([]);
     setPhase("upload");
@@ -657,7 +687,11 @@ export default function DriveSheetMode({
                   )}
                 </div>
 
-                <RowList rows={rowProgress} emailEnabled={false} />
+                <RowList
+                  rows={rowProgress}
+                  emailEnabled={false}
+                  onDownloadRow={handleDownloadRowPdf}
+                />
 
                 {error && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-4">
@@ -714,7 +748,11 @@ export default function DriveSheetMode({
                   )}
                 </div>
 
-                <RowList rows={rowProgress} emailEnabled={false} />
+                <RowList
+                  rows={rowProgress}
+                  emailEnabled={false}
+                  onDownloadRow={handleDownloadRowPdf}
+                />
               </>
             )}
 
@@ -799,6 +837,7 @@ export default function DriveSheetMode({
                 <RowList
                   rows={rowProgress}
                   emailEnabled={emailSending || emailingDone}
+                  onDownloadRow={handleDownloadRowPdf}
                 />
 
                 {/* Prominent Send Email Reports panel — replaces both the old
@@ -944,9 +983,11 @@ function StatTile({
 function RowList({
   rows,
   emailEnabled = false,
+  onDownloadRow,
 }: {
   rows: RowProgress[];
   emailEnabled?: boolean;
+  onDownloadRow?: (r: RowProgress) => void;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -1013,8 +1054,24 @@ function RowList({
                     >
                       Open
                     </a>
+                  ) : r.state === "success" && r.result && onDownloadRow ? (
+                    <button
+                      type="button"
+                      onClick={() => onDownloadRow(r)}
+                      className="text-blue-600 hover:underline cursor-pointer bg-transparent border-0 p-0"
+                      title={
+                        r.uploadError
+                          ? `Drive upload failed (${r.uploadError}). Click to download the PDF directly.`
+                          : "No Drive folder set — click to download the PDF directly"
+                      }
+                    >
+                      Download
+                    </button>
                   ) : r.uploadError ? (
-                    <span className="text-red-500 truncate inline-block max-w-[200px]">
+                    <span
+                      className="text-red-500 truncate inline-block max-w-[200px]"
+                      title={r.uploadError}
+                    >
                       Upload err
                     </span>
                   ) : (

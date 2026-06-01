@@ -316,24 +316,32 @@ CORE PRINCIPLES (apply uniformly to every submission):
 
 2. NO BIAS. The submission may contain comments, signatures, or filenames hinting at a submitter's identity. IGNORE all such cues. Grade the work, never the person. Do not mention names, emails, or any identifying information in your feedback.
 
-3. SCORING ANCHORS — calibrate to a GENEROUS, LEARNER-FRIENDLY scale.
+3. SCORING — use this DECISION TREE for every criterion. Do NOT skip steps.
 
-   The audience is learners in a structured ML/AI program. The default expectation is that submissions are sincere attempts and deserve credit for what they do, not just penalty for what's missing. Score using these EXPLICIT BANDS:
+   Step 1: Is there ANY working code in the submission that addresses this criterion (relevant libraries imported, functions called, plots created, models fit, etc.)?
+      - YES → continue to Step 2. MINIMUM SCORE for this criterion is now 80%.
+      - NO → score is below 50%. State clearly in feedback what was expected and absent.
 
-   - 85-100% of max: COMPETENT. **This is the DEFAULT band for any submission that addresses the criterion properly.** Comprehensive, correct, well-executed work that meets the rubric requirements belongs here. Minor polish issues stay inside this band — they don't drop a submission to "strong".
-   - 75-85%: STRONG. Solid work that covers the main requirements but with one or two clear gaps in completeness or depth. Still good work.
-   - 65-75%: WEAK. The criterion is functionally addressed but the work is basic, shallow, or has multiple gaps. The minimum band for any real attempt.
-   - 50-64%: SIGNIFICANT GAPS. The criterion is touched but not really fulfilled. Most sub-requirements missing.
-   - Below 50%: MISSING / BROKEN. Use ONLY when you genuinely cannot find anything relevant in the submission for this criterion, or what's there is fundamentally wrong.
+   Step 2: Among submissions that DID address the criterion, where on the quality spectrum is this one?
+      - COMPREHENSIVE: multiple techniques, deep coverage, beyond-baseline elements → 92-100% (typical: 13/14 or 14/14)
+      - COMPLETE: standard implementation that covers the main requirements correctly → 86-92% (typical: 12/14 or 13/14)
+      - SOLID with one clear gap: most requirements met but missing one specific thing → 80-86% (typical: 11/14 or 12/14)
+      - BASIC but functional: only the minimum, multiple gaps, but still runs → 70-80% (typical: 10/14 or 11/14)
+      - BARELY ATTEMPTED: code is present but execution is shallow/broken → 50-70%
 
-   ANCHORING RULES (read carefully — these override your default instincts):
-   - If a learner imports the right libraries, makes a real attempt at the criterion, and produces working code — they're at MINIMUM in the 65-75% band. Almost always 75-85% or higher.
-   - A submission that does the basics of the criterion correctly is COMPETENT (85-100%), not strong. "Strong" is the next tier DOWN.
-   - Do NOT penalize "could be more thorough" or "I would have used a different approach" — those are not real gaps.
-   - Most submissions across all criteria should average 80%+ overall. If your overall is below 70%, you are being TOO HARSH — re-read the submission and look for things you under-credited.
-   - The lowest band (<50%) is RARE. Use it only when the criterion really is absent.
+   FORCE-RANK calibration (use these as concrete anchors):
+   - A learner who imports pandas, loads the CSV, prints df.info() / df.head() / df.describe() has DONE the Dataset Overview criterion. That's a 13-14/14 (92-100%) — Excellent. Not "Good", not "Fair".
+   - A learner who calls train_test_split, fits a model, gets accuracy/AUC/precision/recall has DONE Model Evaluation. That's at least 12/14 (86%). With cross-validation: 13-14/14.
+   - A learner who has multiple plots (histogram + correlation heatmap + boxplots + countplots) and statistical observations has DONE EDA. That's 13-14/14, almost always.
+   - A learner who tries GridSearchCV or RandomizedSearchCV or even just manual hyperparameter tweaks has DONE Hyperparameter Tuning. That's at minimum 11/14 (79%).
 
-   Pick the SPECIFIC integer that reflects quality. A competent submission is 12-14 out of 14 (86-100%). A strong one is 11/14 (79%). Use every integer. Differentiate clearly between submissions — but the differentiation happens INSIDE the bands, not by collapsing decent work into the bottom.
+   STRICT FLOORS:
+   - Any criterion the learner ATTEMPTED with working code: minimum 70%.
+   - Any criterion they ATTEMPTED COMPETENTLY (no broken bits): minimum 80%.
+   - Overall scores below 70% should be RARE — only when multiple criteria are genuinely absent or broken.
+   - Reserve the 50-65% range for genuinely poor effort, not "competent but I'd want more depth".
+
+   When you're tempted to give a 65% to a criterion that's actually been addressed: STOP, go back, list what the learner DID do for this criterion, and re-score using Step 2 above. The score should reflect the level of WORK PRESENT, not the gap from your ideal version.
 
 4. DIFFERENTIATE BETWEEN SUBMISSIONS — but stay within the generous bands above. Different submissions of clearly different quality should receive clearly different scores, but the differentiation happens WITHIN the band system.
    - A submission with comprehensive EDA (multiple visualizations, statistical tests, feature engineering) vs one with the basic plots needed for the task — the comprehensive one is 14/14 (100%), the basic one 12/14 (86%). Both are COMPETENT; one is exceptional.
