@@ -140,17 +140,37 @@ export function parseDriveSheet(buffer: ArrayBuffer): ParsedDriveSheet {
     }
   }
 
-  // --- Detect identifier column (for display) -------------------------------
+  // --- Detect identifier column (for display + filename fallback) ----------
+  // Priority order so the fallback when email is missing is meaningful:
+  //   1. A name-like header (Name, Full Name, Student Name, ...)
+  //   2. An id-like header (ID, Student ID, Roll No)
+  //   3. Any column that isn't the link/email/status/score/etc.
+  // Crucially we exclude the email column — email is handled separately, so
+  // idCol must point at *something else* (typically the Name) to be useful as
+  // a "use the name" fallback for PDF naming and the cover page.
   let idCol =
     headers.find((h) =>
-      /^(name|full\s*name|email|e-?mail|id|student|learner|user|candidate|roll)/i.test(
+      /^(full\s*)?name\b|student\s*name|learner\s*name|candidate\s*name|user\s*name/i.test(
         h
       )
     ) || null;
   if (!idCol) {
     idCol =
       headers.find(
-        (h) => h !== linkCol && !/status|score|%|percent|report/i.test(h)
+        (h) =>
+          h !== emailCol &&
+          /^(id|student\s*id|learner\s*id|candidate\s*id|user\s*id|roll(\s*no)?)$/i.test(
+            h
+          )
+      ) || null;
+  }
+  if (!idCol) {
+    idCol =
+      headers.find(
+        (h) =>
+          h !== linkCol &&
+          h !== emailCol &&
+          !/status|score|%|percent|report|emailed/i.test(h)
       ) || null;
   }
 
