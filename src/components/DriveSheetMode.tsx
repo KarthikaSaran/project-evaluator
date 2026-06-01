@@ -46,10 +46,12 @@ interface RowProgress {
   scorePct?: number;
   reportLink?: string;
   uploadError?: string;
-  /** Email-send outcome: "Sent" | "Failed - reason" | "No email" | undefined */
+  /** Email-send outcome: "Sent" | "Sending..." | "Failed - reason" | "No email" | undefined */
   emailed?: string;
   emailFailed?: boolean;
   error?: string;
+  /** Held on success so the "Send Reports" step can regenerate the PDF. */
+  result?: EvaluationResult;
 }
 
 const SUCCESS_STATUS = "Evaluation done";
@@ -77,8 +79,9 @@ export default function DriveSheetMode({
   // PDF upload to Drive — optional. Pre-filled if the parent resolved a
   // folder URL when the user pasted one in the main input.
   const [folderUrl, setFolderUrl] = useState(initialFolderUrl || "");
-  // Email submitters their report — optional
-  const [emailReports, setEmailReports] = useState(false);
+  // Email send is a separate verified action triggered AFTER review.
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailingDone, setEmailingDone] = useState(false);
   const [sheetUpdateStatus, setSheetUpdateStatus] = useState<
     "idle" | "running" | "ok" | "error"
   >("idle");
@@ -132,7 +135,6 @@ export default function DriveSheetMode({
     setPhase("evaluating");
 
     const wantsDriveUpload = folderUrl.trim().length > 0;
-    const wantsEmail = emailReports;
 
     const newResults: EvaluationResult[] = [];
     const updated: RowProgress[] = rowProgress.map((r) => ({ ...r }));
@@ -171,58 +173,51 @@ export default function DriveSheetMode({
             status: SUCCESS_STATUS,
             score: `${result.percentageScore}%`,
             scorePct: result.percentageScore,
+            // Hold the result so the (post-verification) email step can
+            // re-generate the PDF without redoing the OpenAI call.
+            result,
           };
           setRowProgress([...updated]);
 
-          // Generate PDF and (optionally) upload to Drive — inline so the
-          // sheet update at the end has the report link for this row.
-          let pdfBlob: Blob | null = null;
-          try {
-            const pdfResp = await fetch("/api/generate-report", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ result }),
-            });
-            if (pdfResp.ok) pdfBlob = await pdfResp.blob();
-          } catch {
-            // PDF generation failed — sheet still gets Status/Score
-          }
-
-          // We may need the base64 PDF for both upload and email — compute once.
-          let pdfBase64: string | null = null;
-          let pdfFilenameBase = "";
-          if (pdfBlob && (wantsDriveUpload || wantsEmail)) {
-            pdfFilenameBase = reportFilenameBase(
-              row.email,
-              row.identifier,
-              row.rowIndex
-            );
-            pdfBase64 = await blobToBase64(pdfBlob);
-          }
-
-          if (wantsDriveUpload && pdfBlob && pdfBase64) {
+          // Generate PDF and optionally upload to Drive. Email is NOT sent
+          // here — it's a separate, explicit step on the done screen so the
+          // user can verify the report before anything customer-facing.
+          if (wantsDriveUpload) {
             try {
-              const filename = `${pdfFilenameBase}.pdf`;
-              const upResp = await fetch("/api/drive/upload-pdf", {
+              const pdfResp = await fetch("/api/generate-report", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  folderUrl: folderUrl.trim(),
-                  filename,
-                  pdfBase64,
-                }),
+                body: JSON.stringify({ result }),
               });
-              const upData = await upResp.json();
-              if (upData.ok && upData.webViewLink) {
-                updated[i] = {
-                  ...updated[i],
-                  reportLink: upData.webViewLink,
-                };
-              } else {
-                updated[i] = {
-                  ...updated[i],
-                  uploadError: upData.error || "Upload failed",
-                };
+              if (pdfResp.ok) {
+                const pdfBlob = await pdfResp.blob();
+                const pdfBase64 = await blobToBase64(pdfBlob);
+                const filenameBase = reportFilenameBase(
+                  row.email,
+                  row.identifier,
+                  row.rowIndex
+                );
+                const upResp = await fetch("/api/drive/upload-pdf", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    folderUrl: folderUrl.trim(),
+                    filename: `${filenameBase}.pdf`,
+                    pdfBase64,
+                  }),
+                });
+                const upData = await upResp.json();
+                if (upData.ok && upData.webViewLink) {
+                  updated[i] = {
+                    ...updated[i],
+                    reportLink: upData.webViewLink,
+                  };
+                } else {
+                  updated[i] = {
+                    ...updated[i],
+                    uploadError: upData.error || "Upload failed",
+                  };
+                }
               }
             } catch (e) {
               updated[i] = {
@@ -230,62 +225,6 @@ export default function DriveSheetMode({
                 uploadError:
                   e instanceof Error ? e.message : "Upload failed",
               };
-            }
-            setRowProgress([...updated]);
-          }
-
-          if (wantsEmail) {
-            if (!row.email) {
-              updated[i] = {
-                ...updated[i],
-                emailed: "No email in row",
-                emailFailed: true,
-              };
-            } else if (!pdfBase64) {
-              updated[i] = {
-                ...updated[i],
-                emailed: "No PDF available",
-                emailFailed: true,
-              };
-            } else {
-              try {
-                const emResp = await fetch("/api/email/send-report", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    toEmail: row.email,
-                    pdfBase64,
-                    pdfFilename: `${pdfFilenameBase}.pdf`,
-                    context: {
-                      projectName: result.detectedProject || "Your Project",
-                      percentage: result.percentageScore,
-                      rating: result.overallRating,
-                    },
-                  }),
-                });
-                const emData = await emResp.json();
-                if (emData.ok) {
-                  updated[i] = {
-                    ...updated[i],
-                    emailed: "Sent",
-                    emailFailed: false,
-                  };
-                } else {
-                  updated[i] = {
-                    ...updated[i],
-                    emailed: shortenError(emData.error || "Email failed"),
-                    emailFailed: true,
-                  };
-                }
-              } catch (e) {
-                updated[i] = {
-                  ...updated[i],
-                  emailed: shortenError(
-                    e instanceof Error ? e.message : "Email failed"
-                  ),
-                  emailFailed: true,
-                };
-              }
             }
             setRowProgress([...updated]);
           }
@@ -383,6 +322,93 @@ export default function DriveSheetMode({
     }
   };
 
+  // ------------------------- send emails (post-verification, opt-in click)
+  const handleSendEmails = async () => {
+    if (!parsed) return;
+    setEmailSending(true);
+
+    const updated = rowProgress.map((r) => ({ ...r }));
+
+    for (let i = 0; i < updated.length; i++) {
+      const row = updated[i];
+      if (row.state !== "success" || !row.result) continue;
+
+      if (!row.email) {
+        updated[i] = {
+          ...row,
+          emailed: "No email in row",
+          emailFailed: true,
+        };
+        setRowProgress([...updated]);
+        continue;
+      }
+
+      // mark sending
+      updated[i] = { ...row, emailed: "Sending..." };
+      setRowProgress([...updated]);
+
+      try {
+        const pdfResp = await fetch("/api/generate-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ result: row.result }),
+        });
+        if (!pdfResp.ok) throw new Error("PDF generation failed");
+        const pdfBlob = await pdfResp.blob();
+        const pdfBase64 = await blobToBase64(pdfBlob);
+
+        const filenameBase = reportFilenameBase(
+          row.email,
+          row.identifier,
+          row.rowIndex
+        );
+
+        const emResp = await fetch("/api/email/send-report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            toEmail: row.email,
+            pdfBase64,
+            pdfFilename: `${filenameBase}.pdf`,
+            context: {
+              projectName: row.result.detectedProject || "Your Project",
+              percentage: row.result.percentageScore,
+              rating: row.result.overallRating,
+            },
+          }),
+        });
+        const emData = await emResp.json();
+
+        if (emData.ok) {
+          updated[i] = { ...updated[i], emailed: "Sent", emailFailed: false };
+        } else {
+          updated[i] = {
+            ...updated[i],
+            emailed: shortenError(emData.error || "Email failed"),
+            emailFailed: true,
+          };
+        }
+      } catch (e) {
+        updated[i] = {
+          ...updated[i],
+          emailed: shortenError(
+            e instanceof Error ? e.message : "Email failed"
+          ),
+          emailFailed: true,
+        };
+      }
+      setRowProgress([...updated]);
+    }
+
+    // Re-write Emailed column into the source Sheet if applicable
+    if (sourceMeta?.kind === "google-sheet" && sourceMeta.spreadsheetId) {
+      await updateSourceSheet(updated);
+    }
+
+    setEmailSending(false);
+    setEmailingDone(true);
+  };
+
   // -------------------------------------------- update source Sheet in place
   const updateSourceSheet = async (finalRowProgress: RowProgress[]) => {
     if (!parsed || !sourceMeta?.spreadsheetId) return;
@@ -469,7 +495,8 @@ export default function DriveSheetMode({
     setUpdatedXlsxBlob(null);
     setZipBlob(null);
     setFolderUrl("");
-    setEmailReports(false);
+    setEmailSending(false);
+    setEmailingDone(false);
     setSheetUpdateStatus("idle");
     setSheetUpdateError(null);
     previewedRef.current = false;
@@ -649,55 +676,15 @@ export default function DriveSheetMode({
                   )}
                 </div>
 
-                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-3">
-                  <h3 className="font-semibold text-gray-800">
-                    Email PDF reports to submitters{" "}
-                    <span className="text-xs font-normal text-gray-400">
-                      (optional)
-                    </span>
-                  </h3>
-                  <label className="flex items-start gap-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={emailReports}
-                      onChange={(e) => setEmailReports(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 accent-blue-600 cursor-pointer"
-                    />
-                    <span className="text-sm text-gray-700">
-                      After each successful evaluation, email the PDF report
-                      to the submitter&apos;s address from the sheet&apos;s
-                      email column.{" "}
-                      <span className="text-gray-400">
-                        Email is sent from your signed-in Google account; the
-                        recipient sees it as coming from you.
-                      </span>
-                    </span>
-                  </label>
-                  {emailReports && (
-                    <ul className="text-xs text-gray-500 ml-7 space-y-1">
-                      <li>
-                        Detected email column:{" "}
-                        <span className="font-medium text-gray-700">
-                          {parsed.columns.emailCol || "(none — rows without email will be skipped)"}
-                        </span>
-                      </li>
-                      <li>
-                        Subject: <em>Your Project Evaluation Report — {`{project name}`}</em>
-                      </li>
-                      <li>
-                        Attachment: the same PDF that goes to the Drive folder
-                        (named after the submitter&apos;s email).
-                      </li>
-                    </ul>
-                  )}
-                  {emailReports && !authStatus?.signedIn && (
-                    <p className="text-xs text-amber-700">
-                      Sign in with Google to enable email sending.
-                    </p>
-                  )}
+                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-800">
+                  <strong>Heads up:</strong> emails to submitters are
+                  <em> not</em> sent automatically. After the evaluation
+                  finishes, you&apos;ll review the results and explicitly
+                  click &ldquo;Send Reports&rdquo; — so nothing customer-facing
+                  goes out unverified.
                 </div>
 
-                <RowList rows={rowProgress} emailEnabled={emailReports} />
+                <RowList rows={rowProgress} emailEnabled={false} />
 
                 {error && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-4">
@@ -732,7 +719,6 @@ export default function DriveSheetMode({
                       {wantsDriveUpload && (
                         <> · {uploadedCount} uploaded</>
                       )}
-                      {emailReports && <> · {emailedCount} emailed</>}
                     </div>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
@@ -755,7 +741,7 @@ export default function DriveSheetMode({
                   )}
                 </div>
 
-                <RowList rows={rowProgress} emailEnabled={emailReports} />
+                <RowList rows={rowProgress} emailEnabled={false} />
               </>
             )}
 
@@ -782,7 +768,7 @@ export default function DriveSheetMode({
                         }
                       />
                     )}
-                    {emailReports && (
+                    {emailingDone && (
                       <StatTile
                         label="Emails sent"
                         value={emailedCount}
@@ -790,6 +776,71 @@ export default function DriveSheetMode({
                       />
                     )}
                   </div>
+                </div>
+
+                {/* Verify-then-email panel */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-800">
+                      Step 2: Send PDF reports to submitters
+                    </h3>
+                    <span className="text-[10px] uppercase tracking-wide text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
+                      Verify first
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Review the score and the report PDFs above. Nothing has
+                    been sent to candidates yet. When you&apos;re confident the
+                    evaluations look right, click below to email each row&apos;s
+                    PDF to its submitter from your Google account.
+                  </p>
+                  {(() => {
+                    const sendable = rowProgress.filter(
+                      (r) => r.state === "success" && r.email
+                    ).length;
+                    const missingEmail = rowProgress.filter(
+                      (r) => r.state === "success" && !r.email
+                    ).length;
+                    return (
+                      <div className="text-xs text-gray-600 space-y-1">
+                        <div>
+                          • {sendable} report{sendable !== 1 ? "s" : ""} ready
+                          to email
+                        </div>
+                        {missingEmail > 0 && (
+                          <div className="text-amber-700">
+                            • {missingEmail} successful row
+                            {missingEmail !== 1 ? "s" : ""} have no email and
+                            will be skipped
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  <button
+                    type="button"
+                    onClick={handleSendEmails}
+                    disabled={
+                      emailSending ||
+                      emailingDone ||
+                      rowProgress.filter(
+                        (r) => r.state === "success" && r.email
+                      ).length === 0 ||
+                      !authStatus?.signedIn
+                    }
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {emailSending
+                      ? "Sending..."
+                      : emailingDone
+                        ? "Reports sent"
+                        : "Send Reports via Email"}
+                  </button>
+                  {!authStatus?.signedIn && (
+                    <p className="text-xs text-amber-700">
+                      Sign in with Google to enable email sending.
+                    </p>
+                  )}
                 </div>
 
                 {isGoogleSheetSource && (
@@ -849,7 +900,10 @@ export default function DriveSheetMode({
                   </div>
                 </div>
 
-                <RowList rows={rowProgress} />
+                <RowList
+                  rows={rowProgress}
+                  emailEnabled={emailSending || emailingDone}
+                />
 
                 <button
                   type="button"

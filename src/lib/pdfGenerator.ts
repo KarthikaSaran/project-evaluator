@@ -64,7 +64,6 @@ export async function generatePDFReport(
     doc.addPage();
 
     renderScoreSummary(doc, result, pageWidth);
-    checkPageBreak(doc, 300);
 
     renderSectionEvaluations(doc, result, pageWidth);
 
@@ -293,7 +292,9 @@ function renderSectionEvaluations(
   renderSectionHeader(doc, "DETAILED EVALUATION", pageWidth);
 
   result.sections.forEach((section, index) => {
-    checkPageBreak(doc, 200);
+    // Only break a page if the header literally won't fit. Section bodies
+    // auto-flow across pages as needed.
+    checkPageBreak(doc, 60);
     renderEvaluationSection(doc, section, index + 1, pageWidth);
   });
 }
@@ -343,11 +344,10 @@ function renderEvaluationSection(
   doc.moveDown(0.5);
 
   if (section.strengths.length > 0) {
-    checkPageBreak(doc, 80);
+    checkPageBreak(doc, 40);
     doc.fontSize(9).fillColor(COLORS.success).text("Strengths:", 58, doc.y);
     doc.moveDown(0.2);
     section.strengths.forEach((s) => {
-      checkPageBreak(doc, 20);
       doc
         .fontSize(8)
         .fillColor(COLORS.text)
@@ -357,12 +357,11 @@ function renderEvaluationSection(
   }
 
   if (section.shortcomings.length > 0) {
-    checkPageBreak(doc, 80);
+    checkPageBreak(doc, 40);
     doc.moveDown(0.3);
     doc.fontSize(9).fillColor(COLORS.danger).text("Areas to Improve:", 58, doc.y);
     doc.moveDown(0.2);
     section.shortcomings.forEach((sc) => {
-      checkPageBreak(doc, 40);
       doc
         .fontSize(8)
         .fillColor(COLORS.text)
@@ -393,7 +392,7 @@ function renderProsAndCons(
   result: EvaluationResult,
   pageWidth: number
 ) {
-  checkPageBreak(doc, 250);
+  checkPageBreak(doc, 100);
   renderSectionHeader(doc, "STRENGTHS & WEAKNESSES", pageWidth);
 
   const halfWidth = (pageWidth - 10) / 2;
@@ -454,11 +453,12 @@ function renderScopeForImprovement(
   result: EvaluationResult,
   pageWidth: number
 ) {
-  checkPageBreak(doc, 200);
+  if (result.scopeForImprovement.length === 0) return;
+  checkPageBreak(doc, 80);
   renderSectionHeader(doc, "SCOPE FOR IMPROVEMENT", pageWidth);
 
   result.scopeForImprovement.forEach((item, idx) => {
-    checkPageBreak(doc, 30);
+    checkPageBreak(doc, 20);
     const y = doc.y;
     doc
       .circle(62, y + 5, 8)
@@ -480,7 +480,7 @@ function renderBonusPoints(
   result: EvaluationResult,
   pageWidth: number
 ) {
-  checkPageBreak(doc, 180);
+  checkPageBreak(doc, 80);
   renderSectionHeader(doc, "BONUS POINTS & CREATIVITY", pageWidth);
 
   doc
@@ -517,38 +517,41 @@ function renderInterviewerFeedback(
   result: EvaluationResult,
   pageWidth: number
 ) {
-  checkPageBreak(doc, 300);
+  if (!result.interviewerFeedback?.trim()) return;
+  checkPageBreak(doc, 100);
   renderSectionHeader(doc, "INTERVIEWER FEEDBACK", pageWidth);
-
   doc.moveDown(0.3);
 
-  const feedbackY = doc.y;
-  doc.rect(50, feedbackY, 3, 0).fill(COLORS.accent);
-
+  // Per-paragraph accent bar avoids the previous cross-page rect bug where a
+  // single tall rect drawn from feedbackY to currentY would extend past the
+  // visible page when paragraphs spilled over a page boundary.
   const paragraphs = result.interviewerFeedback.split("\n").filter(Boolean);
-  let currentY = feedbackY;
   paragraphs.forEach((p) => {
-    checkPageBreak(doc, 60);
+    checkPageBreak(doc, 40);
+    const startY = doc.y;
     doc
       .fontSize(9)
       .fillColor(COLORS.text)
-      .text(p.trim(), 62, doc.y, { width: pageWidth - 20 });
-    doc.moveDown(0.5);
-    currentY = doc.y;
+      .text(p.trim(), 62, startY, { width: pageWidth - 20 });
+    const endY = doc.y;
+    // Side accent bar for THIS paragraph only — always lives on one page.
+    doc.rect(50, startY, 3, Math.max(8, endY - startY)).fill(COLORS.accent);
+    doc.moveDown(0.4);
   });
 
-  doc.rect(50, feedbackY, 3, currentY - feedbackY).fill(COLORS.accent);
-
-  doc.moveDown(1);
-  checkPageBreak(doc, 60);
-
-  doc
-    .moveTo(50, doc.y)
-    .lineTo(50 + pageWidth, doc.y)
-    .strokeColor(COLORS.accent)
-    .lineWidth(1)
-    .stroke();
-  doc.moveDown(0.5);
+  // Disclaimer flows on whatever page we're on — we don't force a break
+  // here, since that's the empty-trailing-page bug. If it really won't fit,
+  // PDFKit's text wrapper auto-paginates the disclaimer text anyway.
+  doc.moveDown(0.6);
+  if (doc.y + 50 < doc.page.height - 50) {
+    doc
+      .moveTo(50, doc.y)
+      .lineTo(50 + pageWidth, doc.y)
+      .strokeColor(COLORS.accent)
+      .lineWidth(1)
+      .stroke();
+    doc.moveDown(0.4);
+  }
 
   doc
     .fontSize(8)

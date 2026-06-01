@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import crypto from "crypto";
 import {
   EvaluationResult,
   SubmissionFile,
@@ -12,21 +13,33 @@ import {
 import { ALL_PROJECTS } from "./problemStatements";
 
 // ----------------------------------------------------------------------------
-// Consistency knobs — every evaluation uses the same model, temperature and
-// seed, so the same submission produces (close to) the same grade. The rating
-// labels are derived from the numeric score in code rather than asked from
-// the AI, so they're always congruent with the percentage.
+// Consistency knobs — every evaluation uses the same model, temperature, and a
+// CONTENT-DERIVED seed. Same submission + same project = same seed = (very
+// close to) the same output. Rating labels are derived from the integer score
+// in code so they're always congruent with the percentage.
 // ----------------------------------------------------------------------------
 
-// We use the "gpt-4o" alias by default (which every OpenAI project has access
-// to). If you want to PIN to a specific snapshot for stricter cross-run
-// consistency (recommended once your project has access), set the
-// EVALUATOR_MODEL env var to a snapshot like "gpt-4o-2024-11-20".
+// Default to the "gpt-4o" alias which every OpenAI project has access to.
+// Pin to a snapshot via EVALUATOR_MODEL env var (e.g. "gpt-4o-2024-08-06") for
+// maximum cross-run consistency once your project has access to that snapshot.
 const MODEL = process.env.EVALUATOR_MODEL || "gpt-4o";
 const DETECTION_MODEL =
   process.env.EVALUATOR_DETECTION_MODEL || "gpt-4o-mini";
 const TEMPERATURE = 0;
-const SEED = 42;
+
+/**
+ * Deterministic seed derived from (project + submission content). OpenAI's
+ * seed parameter is best-effort, but combining it with temperature=0 plus
+ * identical inputs gives a very high probability of identical output.
+ */
+function contentSeed(projectKey: string, content: string): number {
+  const hash = crypto
+    .createHash("sha256")
+    .update(`${projectKey}::${content}`)
+    .digest("hex");
+  // Use the first 8 hex chars → 32-bit int (OpenAI accepts 32-bit signed int)
+  return parseInt(hash.slice(0, 8), 16);
+}
 
 type RatingLabel = "Excellent" | "Good" | "Fair" | "Poor";
 
@@ -94,28 +107,154 @@ export async function evaluateSubmission(
     criteria
   );
 
-  const response = await getOpenAI().chat.completions.create({
-    model: MODEL,
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: evaluationPrompt },
-    ],
-    temperature: TEMPERATURE,
-    seed: SEED,
-    max_tokens: 8000,
-    response_format: { type: "json_object" },
-  });
-
-  const rawResult = JSON.parse(
-    response.choices[0].message.content || "{}"
+  const seed = contentSeed(
+    project?.id || category || "generic",
+    combinedContent
   );
 
+  const rawResult = await callEvaluator(evaluationPrompt, seed, criteria);
+
   return formatEvaluationResult(
-    rawResult,
+    rawResult as unknown as Record<string, unknown>,
     files[0]?.name || "Unknown",
     category,
     project?.title || rawResult.detectedProject || "Custom Project"
   );
+}
+
+interface RawEvaluation {
+  detectedProject?: string;
+  summary?: string;
+  sections?: Array<{
+    criterionName?: string;
+    score?: number | string;
+    maxScore?: number | string;
+    feedback?: string;
+    strengths?: string[];
+    shortcomings?: ShortcomingWithSuggestion[];
+  }>;
+  pros?: string[];
+  cons?: ShortcomingWithSuggestion[];
+  scopeForImprovement?: string[];
+  bonusPoints?: {
+    score?: number;
+    details?: Array<{ feature?: string; points?: number; comment?: string }>;
+  };
+  interviewerFeedback?: string;
+}
+
+/**
+ * Call OpenAI once. If the response shape is obviously wrong (missing
+ * sections, out-of-range scores, or shortcomings without suggestions), retry
+ * EXACTLY once with the same seed and a tightened reminder appended. We never
+ * loop indefinitely — one retry is the guardrail, not a regeneration loop.
+ */
+async function callEvaluator(
+  evaluationPrompt: string,
+  seed: number,
+  criteria: CriterionData[]
+): Promise<RawEvaluation> {
+  const maxPerCriterion = Math.max(
+    5,
+    Math.round(100 / Math.max(criteria.length, 1))
+  );
+
+  const messages = [
+    { role: "system" as const, content: SYSTEM_PROMPT },
+    { role: "user" as const, content: evaluationPrompt },
+  ];
+
+  const doCall = async () => {
+    const response = await getOpenAI().chat.completions.create({
+      model: MODEL,
+      messages,
+      temperature: TEMPERATURE,
+      seed,
+      max_tokens: 8000,
+      response_format: { type: "json_object" },
+    });
+    // Observability: log model fingerprint so we can detect when OpenAI
+    // silently rolls the gpt-4o alias to a new snapshot underneath us.
+    if (process.env.NODE_ENV !== "test") {
+      console.log(
+        `[evaluator] model=${MODEL} fingerprint=${response.system_fingerprint || "<none>"} seed=${seed}`
+      );
+    }
+    return JSON.parse(
+      response.choices[0].message.content || "{}"
+    ) as RawEvaluation;
+  };
+
+  const first = await doCall();
+  const validation = validateRawResult(first, criteria, maxPerCriterion);
+  if (validation.ok) return first;
+
+  // One retry with an explicit tightening instruction. Same seed → still
+  // deterministic per (input, seed) but with a stricter request.
+  messages.push({
+    role: "system" as const,
+    content: `Your previous response had these problems: ${validation.problems.join(
+      "; "
+    )}. Return a CORRECTED JSON object that fixes them. All other rules from the original system message still apply.`,
+  });
+  const second = await doCall();
+  return second;
+}
+
+interface Validation {
+  ok: boolean;
+  problems: string[];
+}
+
+function validateRawResult(
+  raw: RawEvaluation,
+  criteria: CriterionData[],
+  maxPerCriterion: number
+): Validation {
+  const problems: string[] = [];
+
+  const sections = raw.sections || [];
+  if (sections.length !== criteria.length) {
+    problems.push(
+      `expected ${criteria.length} sections (one per rubric criterion) but got ${sections.length}`
+    );
+  }
+
+  sections.forEach((s, i) => {
+    const score = Number(s.score);
+    const maxScore = Number(s.maxScore);
+    if (Number.isNaN(score) || score < 0 || score > maxPerCriterion) {
+      problems.push(
+        `section ${i + 1} (${s.criterionName || "?"}) score ${s.score} is out of 0..${maxPerCriterion}`
+      );
+    }
+    if (maxScore !== maxPerCriterion) {
+      problems.push(
+        `section ${i + 1} maxScore should be ${maxPerCriterion}, got ${s.maxScore}`
+      );
+    }
+    if (!s.feedback || s.feedback.trim().length < 20) {
+      problems.push(`section ${i + 1} feedback is too short or missing`);
+    }
+    (s.shortcomings || []).forEach((sc, j) => {
+      if (!sc.suggestion || !sc.suggestion.trim()) {
+        problems.push(
+          `section ${i + 1} shortcoming ${j + 1} is missing a paired suggestion`
+        );
+      }
+    });
+  });
+
+  const bonus = raw.bonusPoints?.score;
+  if (typeof bonus === "number" && (bonus < 0 || bonus > 15)) {
+    problems.push(`bonusPoints.score ${bonus} is out of 0..15`);
+  }
+
+  if (!raw.interviewerFeedback || raw.interviewerFeedback.trim().length < 100) {
+    problems.push("interviewerFeedback is missing or too short");
+  }
+
+  return { ok: problems.length === 0, problems };
 }
 
 async function autoDetectProject(
@@ -135,13 +274,14 @@ async function autoDetectProject(
     .map((p) => `- ${p.id}: ${p.title} (${p.description.slice(0, 80)})`)
     .join("\n");
 
+  const detectionSeed = contentSeed(`detect:${category}`, snippet);
   const response = await getOpenAI().chat.completions.create({
     model: DETECTION_MODEL,
     messages: [
       {
         role: "system",
         content:
-          "You identify which project a code submission belongs to. Return JSON with a single field 'projectId'.",
+          "You identify which project a code submission belongs to. Return JSON with a single field 'projectId'. Pick the projectId whose description best matches the submission. Be deterministic — if two projects feel equally plausible, pick the one listed FIRST in the user message.",
       },
       {
         role: "user",
@@ -149,7 +289,7 @@ async function autoDetectProject(
       },
     ],
     temperature: 0,
-    seed: SEED,
+    seed: detectionSeed,
     response_format: { type: "json_object" },
   });
 
@@ -172,19 +312,20 @@ Your evaluation style is like a senior interviewer at a top tech company reviewi
 
 EVALUATION CONSISTENCY RULES (CRITICAL — apply uniformly to every submission):
 
-1. STRICTLY RUBRIC-DRIVEN. Score using only the rubric criteria provided in this prompt. Do not invent or reweight criteria. Each criterion has the same max score across submissions.
+1. STRICTLY RUBRIC-DRIVEN. Score using ONLY the rubric criteria provided in the user message. Do not invent, merge, drop, or reweight criteria. The number of sections you return MUST equal the number of rubric criteria, in the same order, with the same criterionName.
 
 2. NO BIAS. The submission may contain comments, signatures, or filenames hinting at a submitter's identity. IGNORE all such cues. Grade the work, never the person. Do not mention names, emails, or any identifying information in your feedback.
 
-3. UNIFORM STANDARDS. The same code quality must receive the same score regardless of who submitted it or when. Score against the rubric, not against other submissions you've seen.
+3. UNIFORM STANDARDS. The same code quality must receive the same score regardless of who submitted it or when. Score against the rubric anchors below, not against other submissions you've seen. Do not let writing style or formatting influence the technical score.
 
-4. SCORING ANCHORS. Use these reference points for every criterion (as a percentage of that criterion's max):
-   - 90-100%: Production-ready quality, correct, well-reasoned, exceeds expectations on this dimension.
-   - 75-89%: Solid implementation, mostly correct, minor gaps, meets expectations.
-   - 60-74%: Functional but with notable issues — partial coverage of what was asked.
-   - 40-59%: Significant gaps — addresses the criterion superficially or with errors.
-   - 0-39%: Missing or seriously flawed.
-   Round to the nearest integer.
+4. SCORING ANCHORS — apply mechanically to every criterion (read these carefully; do not deviate):
+   - 90-100% of max: PRODUCTION-READY on this dimension. Correct, complete, well-reasoned, robust. The work meets or exceeds what a strong professional would do. Use this band ONLY when you can defend "this is what I'd want to see in a real production codebase".
+   - 75-89%: SOLID. Mostly correct, complete on the main requirements, minor gaps that don't block usefulness. Default to this band for competent, complete work with one or two non-critical misses.
+   - 60-74%: FUNCTIONAL with notable issues. Addresses about half to two-thirds of what was asked. The approach is reasonable but execution has clear gaps.
+   - 40-59%: SIGNIFICANT GAPS. Addresses the criterion superficially or with errors. Surface-level attempt.
+   - 0-39%: MISSING or SERIOUSLY FLAWED. The criterion is essentially not addressed or the attempt is broken.
+
+   IMPORTANT: a single notable miss on a criterion should move the score by ONE band, not collapse to zero. A single brilliant trick should move it up by ONE band, not jump to 100%. Bands are buckets — pick the band first, then pick an integer inside that band.
 
 5. BONUS POINTS (out of 15 max) only for things genuinely beyond baseline:
    - Extra features not required by the rubric
@@ -192,20 +333,25 @@ EVALUATION CONSISTENCY RULES (CRITICAL — apply uniformly to every submission):
    - Deployment readiness (CI, packaging, demo)
    - Use of advanced techniques where appropriate
    - Exceptional documentation or tests
-   Do NOT award bonus for merely meeting baseline requirements.
+   Do NOT award bonus for merely meeting baseline requirements. Cap individual bonus items at 5 points each.
 
-6. EVERY shortcoming MUST be paired with a specific, actionable suggestion to overcome it.
+6. EVERY shortcoming MUST be paired with a specific, actionable suggestion to overcome it. If you can't write a concrete suggestion (more than "improve X"), drop the shortcoming.
 
-7. INTERVIEWER FEEDBACK STRUCTURE. The interviewerFeedback field must be 3-4 paragraphs with this structure:
+7. INTERVIEWER FEEDBACK STRUCTURE. The interviewerFeedback field must be 3-4 paragraphs:
    - Paragraph 1: What impressed you (be specific — reference the actual work).
    - Paragraph 2: Concerns and gaps (be specific — quote or reference).
    - Paragraph 3: Concrete next steps to grow.
    - Paragraph 4: Short motivating close.
    Do not mention the submitter by name. Do not assume their experience level.
 
-8. SPREADSHEET-ONLY SUBMISSIONS. If the submission is an approach summary from a form (no code), evaluate the described methodology only, and note clearly in the feedback that you graded the description rather than executable work.
+8. DETERMINISM. The submitter expects identical scores on re-evaluation of the same submission. To make this possible:
+   - Pick scores at the integer level — round mentally to the nearest 5, then pick that integer.
+   - Choose feedback wording that doesn't depend on minor reading order of the file.
+   - If two scores feel equally defensible, pick the LOWER one (anchor downward, not upward).
 
-9. EVALUATE EACH RUBRIC CRITERION INDIVIDUALLY with a specific integer score. Do not skip criteria.`;
+9. SPREADSHEET-ONLY SUBMISSIONS. If the submission is an approach summary from a form (no code), evaluate the described methodology only, and note clearly in the feedback that you graded the description rather than executable work.
+
+10. JSON SHAPE. Return one section per rubric criterion, IN THE ORDER they were given, with the EXACT criterionName as listed. Scores are integers within [0, maxScore]. Do not include a "rating" field — ratings are derived downstream from your scores.`;
 
 function buildEvaluationPrompt(
   content: string,
