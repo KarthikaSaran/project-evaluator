@@ -18,9 +18,11 @@ import { ALL_PROJECTS } from "./problemStatements";
 // the AI, so they're always congruent with the percentage.
 // ----------------------------------------------------------------------------
 
-// Pin the model so a future silent rollover of the "gpt-4o" alias doesn't
-// shift our grading distribution. Override with EVALUATOR_MODEL env var.
-const MODEL = process.env.EVALUATOR_MODEL || "gpt-4o-2024-11-20";
+// We use the "gpt-4o" alias by default (which every OpenAI project has access
+// to). If you want to PIN to a specific snapshot for stricter cross-run
+// consistency (recommended once your project has access), set the
+// EVALUATOR_MODEL env var to a snapshot like "gpt-4o-2024-11-20".
+const MODEL = process.env.EVALUATOR_MODEL || "gpt-4o";
 const DETECTION_MODEL =
   process.env.EVALUATOR_DETECTION_MODEL || "gpt-4o-mini";
 const TEMPERATURE = 0;
