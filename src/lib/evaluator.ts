@@ -316,32 +316,36 @@ CORE PRINCIPLES (apply uniformly to every submission):
 
 2. NO BIAS. The submission may contain comments, signatures, or filenames hinting at a submitter's identity. IGNORE all such cues. Grade the work, never the person. Do not mention names, emails, or any identifying information in your feedback.
 
-3. SCORING — use this DECISION TREE for every criterion. Do NOT skip steps.
+3. SCORING — be GENEROUS. You are grading LEARNERS, not interview candidates.
 
-   Step 1: Is there ANY working code in the submission that addresses this criterion (relevant libraries imported, functions called, plots created, models fit, etc.)?
-      - YES → continue to Step 2. MINIMUM SCORE for this criterion is now 80%.
-      - NO → score is below 50%. State clearly in feedback what was expected and absent.
+   DEFAULT: For any criterion the learner attempts with working code, the DEFAULT score is 85-95% of max. You drop BELOW this default only when you can name SPECIFIC, CONCRETE gaps.
 
-   Step 2: Among submissions that DID address the criterion, where on the quality spectrum is this one?
-      - COMPREHENSIVE: multiple techniques, deep coverage, beyond-baseline elements → 92-100% (typical: 13/14 or 14/14)
-      - COMPLETE: standard implementation that covers the main requirements correctly → 86-92% (typical: 12/14 or 13/14)
-      - SOLID with one clear gap: most requirements met but missing one specific thing → 80-86% (typical: 11/14 or 12/14)
-      - BASIC but functional: only the minimum, multiple gaps, but still runs → 70-80% (typical: 10/14 or 11/14)
-      - BARELY ATTEMPTED: code is present but execution is shallow/broken → 50-70%
+   SCORING TABLE (per criterion, out of max):
+   - 95-100%: OUTSTANDING. Comprehensive, multi-faceted, professionally polished. (e.g. 14/14)
+   - 88-94%: SOLID. All main requirements met with good quality. **This is the default for completed work.** (e.g. 12-13/14)
+   - 82-87%: GOOD. Main requirements met with minor gaps. (e.g. 11-12/14)
+   - 75-81%: FUNCTIONAL. Most requirements met, a couple of notable gaps. (e.g. 10-11/14)
+   - 65-74%: BASIC. Criterion is touched but not fully fulfilled. Several gaps. (e.g. 9/14)
+   - Below 65%: Use ONLY when the criterion is essentially missing or fundamentally broken.
 
-   FORCE-RANK calibration (use these as concrete anchors):
-   - A learner who imports pandas, loads the CSV, prints df.info() / df.head() / df.describe() has DONE the Dataset Overview criterion. That's a 13-14/14 (92-100%) — Excellent. Not "Good", not "Fair".
-   - A learner who calls train_test_split, fits a model, gets accuracy/AUC/precision/recall has DONE Model Evaluation. That's at least 12/14 (86%). With cross-validation: 13-14/14.
-   - A learner who has multiple plots (histogram + correlation heatmap + boxplots + countplots) and statistical observations has DONE EDA. That's 13-14/14, almost always.
-   - A learner who tries GridSearchCV or RandomizedSearchCV or even just manual hyperparameter tweaks has DONE Hyperparameter Tuning. That's at minimum 11/14 (79%).
+   GENEROSITY RULES:
+   - A learner who imports the right libraries and produces working code for the criterion → DEFAULT 88-94%.
+   - "Could have explored further", "could have tuned more", "missing some depth" → still 88%+. These aren't gaps, they're growth opportunities, and they belong in shortcomings/suggestions but DO NOT lower the score.
+   - Drop to 75-87% ONLY when you can name a specific required sub-step that wasn't done (e.g. "no missing-value handling", "no train/test split", "no cross-validation").
+   - Drop below 75% ONLY when the criterion is multiple-gaps-deep (3+ specific missing requirements).
+   - Drop below 65% ONLY when the criterion is essentially absent (no code that addresses it at all).
 
-   STRICT FLOORS:
-   - Any criterion the learner ATTEMPTED with working code: minimum 70%.
-   - Any criterion they ATTEMPTED COMPETENTLY (no broken bits): minimum 80%.
-   - Overall scores below 70% should be RARE — only when multiple criteria are genuinely absent or broken.
-   - Reserve the 50-65% range for genuinely poor effort, not "competent but I'd want more depth".
+   STILL CALL OUT WEAKNESSES — that's what shortcomings, scopeForImprovement, and the interviewer feedback are for. But: a learner can have 5 valid suggestions for improvement AND still score 90%+. Scoring high doesn't mean "no feedback to give", it means "the work is solid as-is, here's how to take it further".
 
-   When you're tempted to give a 65% to a criterion that's actually been addressed: STOP, go back, list what the learner DID do for this criterion, and re-score using Step 2 above. The score should reflect the level of WORK PRESENT, not the gap from your ideal version.
+   CONCRETE EXAMPLES (anchors — match these patterns):
+   - Imports pandas + reads CSV + df.info() + df.describe() + missing-value check → Dataset Overview = 13-14/14 (93-100%).
+   - 3+ EDA plots + correlation analysis + observations → EDA = 13-14/14.
+   - train_test_split + fits at least one model + reports accuracy/AUC → Model Evaluation = 12-13/14.
+   - Tries multiple models or compares performance → Model Selection = 12-14/14.
+   - Tries GridSearchCV / RandomizedSearchCV / or any hyperparameter exploration → Hyperparameter Tuning = 11-13/14.
+   - Discusses findings + suggests improvements → Results/Future Work = 11-13/14.
+
+   These anchors are GENEROUS BY DESIGN. If you find yourself scoring below them for work that matches these patterns, you are being too harsh. Re-read the submission.
 
 4. DIFFERENTIATE BETWEEN SUBMISSIONS — but stay within the generous bands above. Different submissions of clearly different quality should receive clearly different scores, but the differentiation happens WITHIN the band system.
    - A submission with comprehensive EDA (multiple visualizations, statistical tests, feature engineering) vs one with the basic plots needed for the task — the comprehensive one is 14/14 (100%), the basic one 12/14 (86%). Both are COMPETENT; one is exceptional.
@@ -487,17 +491,35 @@ function formatEvaluationResult(
   const sections = (
     (raw.sections as Record<string, unknown>[]) || []
   ).map((s): EvaluationSection => {
-    const score = Math.max(0, Math.round(Number(s.score) || 0));
+    const rawScore = Math.max(0, Math.round(Number(s.score) || 0));
     const maxScore = Math.max(0, Math.round(Number(s.maxScore) || 0));
+    const strengths = (s.strengths as string[]) || [];
+    const feedback = String(s.feedback || "");
+
+    // ----- Code-level GENEROSITY FLOOR (safety net) -----
+    // If the model identified concrete strengths AND wrote substantive
+    // feedback, the criterion was clearly addressed — floor the score at
+    // 75% of max so the model's instinctive harshness can't override the
+    // prompt. Strengths must be real (non-empty content), not placeholder.
+    const realStrengths = strengths.filter(
+      (st) => typeof st === "string" && st.trim().length > 4
+    );
+    const hasMeaningfulFeedback = feedback.trim().length > 40;
+    const FLOOR_PCT = 0.75; // 75% of max for any genuinely-addressed criterion
+    const flooredScore =
+      realStrengths.length > 0 && hasMeaningfulFeedback && maxScore > 0
+        ? Math.max(rawScore, Math.ceil(maxScore * FLOOR_PCT))
+        : rawScore;
+
+    const score = Math.min(maxScore, flooredScore);
     const pct = maxScore > 0 ? (score / maxScore) * 100 : 0;
     return {
       criterionName: String(s.criterionName || ""),
       score,
       maxScore,
-      // Rating is derived from score in code so it's always congruent.
       rating: ratingFromPercent(pct),
-      feedback: String(s.feedback || ""),
-      strengths: (s.strengths as string[]) || [],
+      feedback,
+      strengths,
       shortcomings: (
         (s.shortcomings as ShortcomingWithSuggestion[]) || []
       ).map((sc) => ({

@@ -790,6 +790,64 @@ export default function DriveSheetMode({
                 </div>
 
 
+                {/* Diagnostic: explain Drive PDF upload state up front so the
+                    user knows why "Open" links may or may not show. */}
+                {successCount > 0 && (
+                  <div
+                    className={`rounded-2xl border p-4 text-sm ${
+                      !wantsDriveUpload
+                        ? "bg-amber-50 border-amber-300 text-amber-800"
+                        : uploadErrorCount > 0
+                          ? "bg-red-50 border-red-300 text-red-800"
+                          : uploadedCount === successCount
+                            ? "bg-green-50 border-green-200 text-green-800"
+                            : "bg-gray-50 border-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {!wantsDriveUpload && (
+                      <>
+                        <strong>No Drive folder was set</strong> for PDF
+                        uploads, so reports weren&apos;t saved to your Drive.
+                        Use the <em>Download</em> link in the Report column
+                        below to fetch each PDF, or start over and paste a
+                        folder URL in the &ldquo;Upload PDF reports to
+                        Drive&rdquo; field on the preview screen.
+                      </>
+                    )}
+                    {wantsDriveUpload && uploadErrorCount > 0 && (
+                      <>
+                        <strong>
+                          {uploadErrorCount} of {successCount} PDF uploads
+                          failed
+                        </strong>{" "}
+                        — hover the &ldquo;Upload err&rdquo; chip in the
+                        Report column for the specific error. The most
+                        common cause is the signed-in account not having
+                        write access to the folder. Use the Download link
+                        as a fallback.
+                      </>
+                    )}
+                    {wantsDriveUpload &&
+                      uploadErrorCount === 0 &&
+                      uploadedCount === successCount && (
+                        <>
+                          ✓ All {uploadedCount} PDF report
+                          {uploadedCount !== 1 ? "s" : ""} uploaded to your
+                          Drive folder.
+                        </>
+                      )}
+                    {wantsDriveUpload &&
+                      uploadErrorCount === 0 &&
+                      uploadedCount < successCount && (
+                        <>
+                          Uploaded {uploadedCount} of {successCount} PDFs to
+                          Drive — some uploads are still in flight or this
+                          summary refreshed early.
+                        </>
+                      )}
+                  </div>
+                )}
+
                 {isGoogleSheetSource && (
                   <div
                     className={`rounded-2xl border p-4 text-sm ${
