@@ -32,16 +32,18 @@ export default function Home() {
   });
   const [sheetLink, setSheetLink] = useState("");
   const [fetchingSheet, setFetchingSheet] = useState(false);
+  /** If the pasted URL was a folder, we remember it to reuse as the PDF
+      destination — saves the user pasting it twice. */
+  const [resolvedFolderUrl, setResolvedFolderUrl] = useState<string | null>(
+    null
+  );
 
   const handleCategoryChange = (cat: ProjectCategory) => {
     setCategory(cat);
   };
 
-  /**
-   * Fetch an xlsx or Google Sheet from a Drive link and return it as a File.
-   * For Google Sheets the server exports to xlsx via the Drive API (needs sign-in).
-   */
-  const fetchSheetFromDriveLink = async (link: string): Promise<File> => {
+  /** Fetch an xlsx/Google Sheet from a Drive link and return it as a File. */
+  const fetchSheetFromUrl = async (link: string): Promise<File> => {
     const response = await fetch("/api/fetch-sheet", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -61,6 +63,58 @@ export default function Home() {
         data.mimeType ||
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
+  };
+
+  const isFolderUrl = (url: string) =>
+    /drive\.google\.com\/drive\/(?:u\/\d+\/)?folders\//.test(url);
+
+  /**
+   * Given any Drive URL, return both the loaded sheet File and (optionally)
+   * the folder URL to reuse as the PDF destination.
+   *
+   *   - Folder URL → list spreadsheets inside, pick the most recent one,
+   *     fetch it, and remember the folder URL for PDF uploads.
+   *   - Sheet URL (Google Sheet or .xlsx) → fetch directly.
+   */
+  const resolveSheetInput = async (
+    link: string
+  ): Promise<{ file: File; folderUrl: string | null; sheetUrl: string }> => {
+    if (isFolderUrl(link)) {
+      // Auto-discover sheet inside folder
+      const resp = await fetch("/api/drive/find-sheet-in-folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderUrl: link }),
+      });
+      const data = await resp.json();
+      if (!data.ok) {
+        throw new Error(
+          data.error || "Could not look inside that Drive folder"
+        );
+      }
+      const files = (data.files || []) as Array<{
+        id: string;
+        name: string;
+        kind: "google-sheet" | "xlsx";
+      }>;
+      if (files.length === 0) {
+        throw new Error(
+          "No spreadsheet found in that folder. It needs to contain an .xlsx file or a Google Sheet listing the submissions."
+        );
+      }
+      // If multiple, pick the most recently modified (the API sorts for us).
+      const chosen = files[0];
+      const sheetUrl =
+        chosen.kind === "google-sheet"
+          ? `https://docs.google.com/spreadsheets/d/${chosen.id}/edit`
+          : `https://drive.google.com/file/d/${chosen.id}/view`;
+      const file = await fetchSheetFromUrl(sheetUrl);
+      return { file, folderUrl: link, sheetUrl };
+    }
+
+    // Direct sheet/xlsx link
+    const file = await fetchSheetFromUrl(link);
+    return { file, folderUrl: null, sheetUrl: link };
   };
 
   // ----- Decide drive-sheet vs files mode on the client by peeking at xlsx -----
@@ -102,21 +156,24 @@ export default function Home() {
 
     let inputFiles: File[] = files;
 
-    // -- Drive link mode: fetch the xlsx/Google Sheet first --
+    // -- Drive link mode: resolve folder URL or sheet URL first --
     if (hasLink) {
       setFetchingSheet(true);
       try {
-        const file = await fetchSheetFromDriveLink(sheetLink.trim());
-        inputFiles = [file];
+        const resolved = await resolveSheetInput(sheetLink.trim());
+        inputFiles = [resolved.file];
 
-        // If the link pointed to a Google Sheet, remember the spreadsheet ID
-        // so DriveSheetMode can write Score/Status/Report Link back in place.
-        const spreadsheetId = extractSpreadsheetId(sheetLink.trim());
+        // The resolved sheet URL tells us whether the source is a Google
+        // Sheet (in-place updates) or an exported xlsx (downloadable copy).
+        const spreadsheetId = extractSpreadsheetId(resolved.sheetUrl);
         setSourceMeta(
           spreadsheetId
             ? { kind: "google-sheet", spreadsheetId }
             : { kind: "upload" }
         );
+
+        // If the user pasted a folder URL, reuse it as the PDF destination.
+        setResolvedFolderUrl(resolved.folderUrl);
       } catch (e) {
         setError(
           e instanceof Error ? e.message : "Could not fetch sheet from Drive"
@@ -127,6 +184,7 @@ export default function Home() {
       setFetchingSheet(false);
     } else {
       setSourceMeta({ kind: "upload" });
+      setResolvedFolderUrl(null);
     }
 
     // Auto-detect Drive Links Spreadsheet — single .xlsx whose cells look like Drive URLs
@@ -241,6 +299,7 @@ export default function Home() {
     setDriveSheetFile(null);
     setSheetLink("");
     setFetchingSheet(false);
+    setResolvedFolderUrl(null);
   };
 
   const hasBYOPStep = category === "bring-your-own";
@@ -368,7 +427,7 @@ export default function Home() {
                 </div>
                 <div className="relative flex justify-center text-xs">
                   <span className="bg-white px-3 text-gray-400">
-                    or paste a Drive link to an xlsx / Google Sheet
+                    or paste a Drive URL
                   </span>
                 </div>
               </div>
@@ -378,15 +437,16 @@ export default function Home() {
                   type="url"
                   value={sheetLink}
                   onChange={(e) => setSheetLink(e.target.value)}
-                  placeholder="https://docs.google.com/spreadsheets/d/... or https://drive.google.com/file/d/..."
+                  placeholder="https://drive.google.com/drive/folders/...  (folder, sheet, or xlsx all work)"
                   className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-gray-800"
                 />
                 <p className="text-xs text-gray-400">
-                  This is the <strong>submissions sheet</strong> (the spreadsheet listing
-                  Name / Email / Drive Link rows) — not the folder where PDFs go. Google
-                  Sheets are exported as .xlsx automatically (needs sign-in); plain .xlsx
-                  Drive files work either signed in or via public sharing. The folder URL
-                  for PDF uploads is set in the next screen, after the sheet loads.
+                  <strong>Folder URL</strong> — we&apos;ll find the spreadsheet inside and
+                  reuse the same folder for the report PDFs (one less link to paste).{" "}
+                  <strong>Sheet / .xlsx URL</strong> — we&apos;ll load it directly and
+                  you can specify a separate folder for PDFs on the next screen. Sign in
+                  with Google for folders shared with{" "}
+                  <code className="bg-gray-100 px-1 rounded">@interviewkickstart.com</code>.
                 </p>
               </div>
             </div>
@@ -429,6 +489,7 @@ export default function Home() {
           <DriveSheetMode
             category={category}
             initialFile={driveSheetFile}
+            initialFolderUrl={resolvedFolderUrl}
             stepNumber={uploadStepNumber}
             sourceMeta={sourceMeta}
             onReset={handleReset}

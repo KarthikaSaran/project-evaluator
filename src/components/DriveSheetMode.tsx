@@ -26,6 +26,9 @@ interface DriveSheetModeProps {
   projectId?: string;
   stepNumber: number;
   initialFile?: File | null;
+  /** If the parent resolved a folder URL (user pasted a folder), pre-fill the
+      PDF-output field with it so they don't have to paste it twice. */
+  initialFolderUrl?: string | null;
   sourceMeta?: SourceSheetMeta;
   onReset?: () => void;
 }
@@ -56,6 +59,7 @@ export default function DriveSheetMode({
   projectId,
   stepNumber,
   initialFile,
+  initialFolderUrl,
   sourceMeta,
   onReset,
 }: DriveSheetModeProps) {
@@ -70,8 +74,9 @@ export default function DriveSheetMode({
   const [building, setBuilding] = useState(false);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
 
-  // PDF upload to Drive — optional
-  const [folderUrl, setFolderUrl] = useState("");
+  // PDF upload to Drive — optional. Pre-filled if the parent resolved a
+  // folder URL when the user pasted one in the main input.
+  const [folderUrl, setFolderUrl] = useState(initialFolderUrl || "");
   // Email submitters their report — optional
   const [emailReports, setEmailReports] = useState(false);
   const [sheetUpdateStatus, setSheetUpdateStatus] = useState<
@@ -624,6 +629,12 @@ export default function DriveSheetMode({
                     email. Re-runs overwrite existing files so the Drive URL
                     stays stable. Needs Google sign-in.
                   </p>
+                  {initialFolderUrl && folderUrl === initialFolderUrl && (
+                    <p className="text-xs text-blue-600 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+                      ✓ Pre-filled from the folder you pasted earlier. Change
+                      it if you want PDFs to land somewhere else.
+                    </p>
+                  )}
                   <input
                     type="url"
                     value={folderUrl}
