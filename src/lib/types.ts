@@ -1,10 +1,15 @@
-export interface ProblemStatement {
+export interface ProjectData {
   id: string;
   category: ProjectCategory;
   title: string;
   description: string;
-  deliverables: string[];
-  evaluationCriteria: EvaluationCriterion[];
+  fullContent: string;
+  criteria: CriterionData[];
+}
+
+export interface CriterionData {
+  name: string;
+  description: string;
 }
 
 export type ProjectCategory =
@@ -12,7 +17,8 @@ export type ProjectCategory =
   | "dl-mini-project"
   | "case-study-1"
   | "case-study-2"
-  | "capstone"
+  | "capstone-flagship"
+  | "capstone-advanced"
   | "bring-your-own";
 
 export const CATEGORY_LABELS: Record<ProjectCategory, string> = {
@@ -20,15 +26,10 @@ export const CATEGORY_LABELS: Record<ProjectCategory, string> = {
   "dl-mini-project": "DL Mini Project",
   "case-study-1": "Case Study 1",
   "case-study-2": "Case Study 2",
-  "capstone": "Capstone Project",
+  "capstone-flagship": "Capstone - Flagship ML",
+  "capstone-advanced": "Capstone - Advanced ML",
   "bring-your-own": "Bring Your Own Project",
 };
-
-export interface EvaluationCriterion {
-  name: string;
-  description: string;
-  maxScore: number;
-}
 
 export interface SubmissionFile {
   name: string;

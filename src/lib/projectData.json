@@ -1,0 +1,1012 @@
+[
+  {
+    "id": "learning-hope",
+    "category": "ml-mini-project",
+    "title": "LearningHope - DonorsChoose Project Approval",
+    "description": "Build a ML model to predict approval status of DonorsChoose.org project proposals. Analyze project descriptions, resource needs, teacher information, and historical outcomes. Implement classification with feature engineering on text and numerical data.",
+    "fullContent": "Learning Hope\nFunding the Future, One Project at a Time\nDonorsChoose.org\nDonorsChoose stands at the forefront of transforming educational landscapes by providing a unique crowdfunding platform that bridges the gap between passionate teachers and generous donors. Founded in 2000 by Charles Best, a former Bronx public school teacher, the organization has become a beacon of hope for educators seeking to enhance the learning experiences of their students.\nThe platform operates on a simple yet powerful premise: teachers create project proposals outlining the resources they need, ranging from essential classroom supplies to innovative educational tools. These proposals are then featured on the DonorsChoose website, where potential donors\u2014ranging from individuals and corporations to philanthropic organizations\u2014can pursue projects aligned with their interests and values.\nBusiness Problem\nDonorsChoose faces the challenge of efficiently predicting the approval status of project proposals submitted by teachers. The current manual review process is time-consuming and may not harness the full potential of available data. To address this, the business problem is to implement a machine learning solution that can accurately predict whether a project will be approved or not based on various project-related features.\nKey Business Objectives\nAutomate Approval Prediction: Use technology to predict whether a given project proposal is likely to be approved.\n\nReduce Processing Time: Implementing a predictive model will significantly reduce the time required for manual project review, enabling quicker responses to teachers and enhancing overall operational efficiency.\nImprove Decision-Making: Provide decision-makers at DonorsChoose with a data-driven tool to assess the likelihood of project success, allowing for more informed and objective project approval decisions.\nEnhance User Experience: Create a more streamlined and responsive experience for teachers submitting projects by reducing uncertainty and providing timely feedback on the likelihood of their project being approved.\nOptimize Resource Allocation: Direct resources more effectively by focusing attention on projects with a higher predicted probability of approval, thereby increasing the success rate of funded projects on the platform.\nMachine Learning Problem\nThe primary objective of this machine learning project is to develop a predictive model that can accurately forecast the approval status of project proposals submitted on the DonorsChoose platform. Leveraging historical data and key project features, the challenge is to implement a classification algorithm that distinguishes between projects likely to be approved and those likely to be rejected.\nTechnical Objectives\nData Collection and Exploration: Gather and explore the dataset containing historical information on DonorsChoose project proposals, encompassing features such as project descriptions, resource needs, teacher information, and past approval outcomes.\nFeature Engineering: Identify and create relevant features that significantly influence the project approval decision. This may involve extracting insights from project descriptions, analyzing historical approval patterns, and incorporating metadata related to teachers and schools.\nModel Selection: Evaluate and select appropriate machine learning classification algorithms for predicting project approval status. Consideration should be given to factors such as interpretability, accuracy, and the ability to handle imbalanced datasets.\nTraining and Validation: Train the selected model using the historical dataset, employing validation techniques to ensure robust performance and the avoidance of overfitting.\nHyperparameter Tuning: Optimize the model's hyperparameters to achieve the best possible predictive accuracy while maintaining generalizability to new project proposals.\nEvaluation Metrics: Assess the model's performance using relevant metrics such as precision, recall, and F1-sco",
+    "criteria": [
+      {
+        "name": "Understanding of Objective",
+        "description": "Demonstrates understanding of project objectives by accurately identifying problem statement, relevant variables, and target outcome."
+      },
+      {
+        "name": "Exploratory Data Analysis",
+        "description": "Conducts comprehensive univariate/multivariate exploratory data analysis, identifying patterns and trends in all the dataset features. The analysis is not just supported by appropriate visualizations but also consists of thorough interpretation and decision making."
+      },
+      {
+        "name": "Data Processing and Vectorization",
+        "description": "All the features are perfectly cleaned and preprocessed. Text features follow the general preprocessing techniques such as stop-words removal, special characters removal etc. Numerical features are standardized and normalized. Several vectorization techniques are experimented with for the given data"
+      },
+      {
+        "name": "Model Training Experiments and Hyperparameter Tuning",
+        "description": "Conducts thorough model training experiments and hyperparameter tuning, exploring a wide range of algorithms and tuning strategies to optimize performance effectively. Experiments conducted with 3 or more algorithms across several categories (Linear, Tree Based, Ensemble Models etc.). Utilization of"
+      },
+      {
+        "name": "Selection and Application of Evaluation Metrics",
+        "description": "Model performance evaluation is selection is based on 3 or more classification metrics such as Precision, Recall, F1-Score, Accuracy, RoC-AUC etc. Confusion Matrix exist for Test Evaluation. The evaluation is supported using relevant visualizations. The evaluation on the relevant datasets is done us"
+      },
+      {
+        "name": "Result Analysis/Future Work",
+        "description": "Analyzes model results thoroughly, drawing insightful conclusions and providing actionable recommendations based on a comprehensive understanding of model performance. The choice of model performance is based on comprehensive understanding of the evaluation metrics. The result interpretation is clea"
+      },
+      {
+        "name": "Documentation and Reporting",
+        "description": "Presents clear, organized, and complete project documentation and reports that effectively communicate the methodology and results."
+      }
+    ]
+  },
+  {
+    "id": "lending-club-ml",
+    "category": "ml-mini-project",
+    "title": "Lending Club Loan Approval System",
+    "description": "Build a ML model that predicts whether a borrower will default on their loan using credit scores, debt-to-income ratios, loan purposes, and financial metrics. Classify loan applications as likely to default or likely to be repaid before loan approval.",
+    "fullContent": "Learning Hope\nFunding the Future, One Project at a Time\nDonorsChoose.org\nDonorsChoose stands at the forefront of transforming educational landscapes by providing a unique crowdfunding platform that bridges the gap between passionate teachers and generous donors. Founded in 2000 by Charles Best, a former Bronx public school teacher, the organization has become a beacon of hope for educators seeking to enhance the learning experiences of their students.\nThe platform operates on a simple yet powerf",
+    "criteria": [
+      {
+        "name": "Dataset Overview",
+        "description": "Provides a comprehensive and detailed overview of all key features, target variables, and data types. Clear understanding of dataset structure and context is demonstrated."
+      },
+      {
+        "name": "Data loading and pre-processing",
+        "description": "Thorough handling of missing data, outliers, and appropriate encoding/scaling. Demonstrates thoughtful feature selection and engineering to improve model performance."
+      },
+      {
+        "name": "Exploratory Data Analysis (EDA)",
+        "description": "In-depth analysis using both statistical methods and visualizations. Patterns, anomalies, and insights are clearly documented and used to guide modeling."
+      },
+      {
+        "name": "Model Selection",
+        "description": "Thorough comparison of multiple models with appropriate justification for final selection. Models are well-aligned with the problem."
+      },
+      {
+        "name": "Hyperparameter Tuning",
+        "description": "Extensive hyperparameter optimization using appropriate techniques (e.g., grid search). Clear improvements in model performance are demonstrated."
+      },
+      {
+        "name": "Model Evaluation",
+        "description": "Rigorous evaluation using appropriate metrics (precision, recall, F1-score, ROC-AUC) with clear interpretation of results. Robust cross-validation is applied."
+      },
+      {
+        "name": "Result Analysis and Future Work",
+        "description": "Detailed analysis of model strengths and weaknesses. Provides actionable suggestions for future improvements, demonstrating a deep understanding of the problem."
+      }
+    ]
+  },
+  {
+    "id": "group-emotion-prediction",
+    "category": "dl-mini-project",
+    "title": "Group Emotion Prediction",
+    "description": "Build a deep learning system to predict group emotions from images. Detect faces using YOLOv5/HaarCascade/SSD, classify individual emotions with DeepFace/FER, and aggregate into group-level emotion predictions. Includes manual image labeling and evaluation.",
+    "fullContent": "EmoSense\nUnderstanding Group Emotions through Individual Facial Analysis\nBusiness Problem\nPicture this: You're organizing a company retreat, a school assembly, or perhaps a community gathering. As the organizer, you're keen to ensure everyone is engaged and enjoying themselves. But how can you gauge the collective mood of the group? That's where this project comes in. The aim is to develop a system capable of analyzing group images to identify the emotions of the individuals within them. By employing deep learning models and algorithms, we aim to identify whether the group is demonstrating happiness, enthusiasm, apprehension, or any other emotional state.\nSuch a system holds immense potential for various applications. For businesses, it could provide valuable insights into employee satisfaction during team-building events or meetings. In educational settings, it could help educators assess student engagement during lectures or group activities. Even event organizers could leverage this tool to ensure attendees are having a positive experience. Ultimately, by decoding group emotions through visual data, we strive to enhance social dynamics and foster environments favorable to collective well-being and productivity.\nExisting Solution and Limitations\nUnderstanding group emotions from group images is challenging because it involves identifying how each person in the group feels, which can be different for everyone. Traditional methods often treat the whole group as feeling the same way, missing the individual emotions. Also, analyzing group pictures accurately means needing to pick out emotions from both the whole group and each person's face, which can be hard because of different lighting and facial expressions. Plus, emotions can be subtle and vary based on the situation, making it tricky to get it right. Finally, doing this quickly and accurately is important for tasks like managing events or customer interactions.\nProposed Solution\nThis project aims to redefine the way we perceive and interpret group emotions by implementing an approach that takes into account the individual emotions within a group. Instead of solely analyzing group images as a whole, our solution involves employing deep learning models to extract emotions of individuals given group images. We strive to create a comprehensive understanding of group emotions that captures the rich diversity of feelings present among group members.\nDeep Learning Problem\nWe aim to create a pipeline using algorithms or pretrained deep learning models to extract human faces in group images and then identify emotions of each human face. Technically, this is a face detection and classification problem.\nTechnical Objectives\nFace Detection and Extraction\nGiven an image of a group of people, extract and isolate faces of individual people in the image.\nUse pretrained models such as YOLOv8, YOLOv8 Face, Single-Shot Multibox Detector (SSD), or non-ML algorithmic techniques such as HaarCascade to extract these individual faces.\nEmotion Classification\nOnce the individual faces have been extracted, identify the emotion of each of the faces in the given image.\nUse techniques such as majority voting to identify the emotion of the entire group.\nUse Facial Attribute Analysis from DeepFace library to analyze individual emotions. Feel free to explore other Facial Emotion Recognition models.\nLabeling, Validation and Evaluation\nTo enable performance validation of the pipeline, we have scrapped about 3000 group images from the internet.\nDownload the images from here.\nLabel all or a subset of images manually for faces and emotions of each of the faces. You can use a tool such as Label Studio for the same. If you choose to label a subset of images, ensure that there is a diversity in the kind of images you include in your subset.\nUse the labeled images to validate the performance of your solution. Benchmark your solution for latency, as well as against statistical metrics such as Intersection of Union ",
+    "criteria": [
+      {
+        "name": "Framework Development",
+        "description": "Implementation process is exceptionally clear and effective, achieving all objectives. Developed a highly accurate and efficient framework for recognizing individual emotions within group images/videos. Implemented advanced face detection techniques (e.g., YOLOvx, HaarCascade, SSD) effectively, accu"
+      },
+      {
+        "name": "Emotion Prediction Models",
+        "description": "Successfully employed pre-trained models (e.g., DeepFace, FER) to predict distinct emotions for each individual in the image, achieving high accuracy. Seamlessly integrated and adapted existed technologies."
+      },
+      {
+        "name": "Manual Image Labeling and Model Evaluation",
+        "description": "Conducted thorough manual labeling of images and performed a comprehensive evaluation of the proposed model using appropriate metrics (e.g., cross-entropy losses, sample analyses), demonstrating a deep understanding of model performance, showcasing analysis of False Positives."
+      },
+      {
+        "name": "Innovation and Creativity",
+        "description": "Highly innovative approach demonstrated, showcasing creativity in integrating existing technologies and proposing a innovative and original solution, breaking away from traditional methods. Enhancements are thoughtful and highly feasible, considering the project's context."
+      },
+      {
+        "name": "Presentation and Documentation",
+        "description": "Clear and well-organized presentation of the project, including detailed documentation, code comments, and visual aids (charts, graphs) for understanding results. Comments and documentation are comprehensive and crystal clear, facilitating easy understanding for the reader."
+      }
+    ]
+  },
+  {
+    "id": "spoiler-shield",
+    "category": "dl-mini-project",
+    "title": "Spoiler Shield - Movie Review Spoiler Detection",
+    "description": "Build a deep learning NLP model to detect spoilers in movie/TV show reviews. Use text classification with transformers and sequence models to flag spoiler content. Evaluate with precision, recall, F1-score.",
+    "fullContent": "Spoiler Shield\nUncover the Thrill, Shield the Surprise\nBusiness Problem\nIn the realm of user-generated reviews, especially when considering whether to watch a movie or TV show, reviews play a pivotal role in providing insights into the qualitative aspects of the content. However, these reviews often unintentionally disclose crucial plot details, commonly known as 'spoilers.' These spoilers can range from revealing the unexpected fate of a character to exposing the identity of a murderer in a crime-suspense movie; for potential viewers seeking an immersive and suspenseful experience, encountering spoilers can diminish the thrill associated with the uncertainty and curiosity of media consumption.\nThe challenge lies in devising a solution to identify and flag these spoilers within entertainment reviews effectively. By doing so, users can navigate review platforms with greater confidence, ensuring they maintain the excitement of discovering plot twists without unintentionally having key elements revealed beforehand. This business problem underscores the need for a robust and accurate model to classify reviews based on their spoiler content, contributing to an enhanced user experience on platforms like IMDb.\nKey Business Objectives\nOptimized User Enjoyment: Enhance user satisfaction by safeguarding against spoilers, fostering a more enjoyable IMDb experience.\nInformed User Choices: Empower users with the ability to make informed decisions about reading reviews, preserving the excitement of media consumption.\nHeightened Platform Loyalty: Increase user loyalty and engagement on IMDb by actively addressing and solving the spoiler-related concerns of the audience.\nDeep Learning Problem\nThe core of our project involves employing Natural Language Processing (NLP) techniques, specifically deep learning models, to address the challenge of identifying spoilers in IMDb reviews. The task at hand is a binary classification problem: given a review, the model needs to determine whether it contains spoilers or not. This involves understanding the contextual nuances and language intricacies that signify potential plot revelations.\nTechnical Objectives\nText Preprocessing\nTokenization: Breaking down reviews into individual words or subword units to create a meaningful input format for the model.\nPadding: Ensuring uniform length of input sequences to facilitate efficient batch processing.\nTraining/Fine-Tuning\nChoosing an appropriate architecture is pivotal for the success of our spoiler prediction model.\nConsidering the sequential nature of text data, recurrent neural networks (RNNs), Long Short-Term Memory networks (LSTMs), or Transformer architectures could be explored.\nAdditionally, leveraging pre-trained embeddings such as Word2Vec, GloVe, or more advanced contextual embeddings like BERT may enhance the model's ability to capture intricate language patterns.\nTrain a model from scratch or used a pretrained model like BERT along with Text Classification\nEvaluation\nEvaluate the model's performance using metrics like accuracy, precision, recall, and F1-score on the test set. Insightful analysis of false positives and false negatives will provide valuable feedback for model improvement.\nAbout the Dataset\nThe IMDB Spoiler Dataset comprises two primary files, providing a comprehensive collection of user-generated reviews and metadata about movies and TV shows.\nIMDB_reviews.json:\nreview_date: Date when the review was written.\nmovie_id: A unique identifier for the item, linking it to corresponding metadata in the IMDB_movie_details.json file.\nuser_id: A unique identifier for the author of the review.\nis_spoiler: A binary indicator specifying whether the review contains spoilers or not.\nreview_text: The textual content of the user's review, providing insights into their opinions and thoughts about the item.\nrating: The numerical rating assigned by the user to the item.\nreview_summary: A concise summary accompanying the review, offering a quick overview of ",
+    "criteria": [
+      {
+        "name": "Understanding of Objective",
+        "description": "Demonstrates understanding of project objectives by accurately identifying problem statement, relevant variables, and target outcome."
+      },
+      {
+        "name": "Exploratory Data Analysis",
+        "description": "Conducts comprehensive univariate/multivariate exploratory data analysis, identifying patterns and trends in dataset features. The analysis is not just supported by appropriate visualizations but also consists of thorough interpretation and decision making. Atleast 6-8 such visualizations and/or ana"
+      },
+      {
+        "name": "Model Training Experiments and Hyperparameter Tuning",
+        "description": "Conducts thorough model training experiments and hyperparameter tuning, exploring a wide range of algorithms and tuning strategies to optimize performance effectively. Experiments conducted with 3 or more algorithms across several categories (Simple, Feed-Forward Neural Network, RNN, Transformers et"
+      },
+      {
+        "name": "Selection and Application of Evaluation Metrics",
+        "description": "Model performance evaluation is selection is based on 3 or more classification metrics such as Precision, Recall, F1-Score, Accuracy, RoC-AUC etc. Confusion Matrix exist for Test Evaluation. The evaluation is supported using relevant visualizations. The evaluation on the relevant datasets is done us"
+      },
+      {
+        "name": "Result Analysis/Future Work",
+        "description": "Analyzes model results thoroughly, drawing insightful conclusions and providing actionable recommendations based on a comprehensive understanding of model performance. The choice of model performance is based on comprehensive understanding of the evaluation metrics. The result interpretation is clea"
+      }
+    ]
+  },
+  {
+    "id": "lending-club-cs1",
+    "category": "case-study-1",
+    "title": "Lending Club Loan Approval System",
+    "description": "End-to-end case study on automating Lending Club's loan approval using ML classification. Predict loan defaults optimizing for both default risk and rejection risk with comprehensive EDA, feature engineering, and model evaluation.",
+    "fullContent": "Project Outline - Lending Club Loan Approval System\nLending Club, founded in 2006 by Renaud Laplanche, revolutionized the lending space by creating a direct connection between borrowers and investors, bypassing traditional banking intermediaries. This platform enables individuals to secure loans while offering investors a chance to fund these loans and earn returns. However, Lending Club faces a critical challenge: assessing loan applications accurately to avoid defaults and missed opportunities with credit-worthy borrowers.\nBusiness Problem\nThe current loan approval process at Lending Club is manually intensive, with underwriters reviewing credit scores, income, debt, and other parameters to decide whether to approve or reject a loan. This process is not only time-consuming but prone to human error, leading to two types of risks:\nDefault Risk: A borrower fails to repay the loan on time, leading to losses for both Lending Club and investors.\nRejection Risk: A credit-worthy borrower is denied a loan, causing Lending Club to miss out on potential profits.\nTo address this, Lending Club aims to implement a machine learning solution that automates the loan approval process, improving accuracy and efficiency.\nKey Business Objectives\nAutomate Loan Approval: Use machine learning to automatically assess whether a loan is likely to be repaid or defaulted on.\nReduce Processing Time: Minimize the time taken for manual review, enabling faster loan approvals and improving the customer experience.\nEnhance Decision-Making: Provide decision-makers with data-driven insights to better assess loan risks, reducing default rates and improving profitability.\nMaximize Profit Potential: Approve more credit-worthy borrowers and reduce missed opportunities by utilizing a robust prediction model.\nMachine Learning Problem\nThe objective is to build a machine learning model that predicts whether a borrower will default on their loan. This involves analyzing historical data and various features like borrower credit scores, debt-to-income ratios, loan purposes, and other financial metrics. The solution should classify loan applications into two categories: \"likely to default\" or \"likely to be repaid.\"\nNote - The model should be able to make the prediction before the loan is approved, thereby increasing the chances of success in the future.\nTechnical Objectives\nData Collection and Exploration:\nGather historical data on loans issued by Lending Club, including features such as borrower demographics, credit history, loan details, and repayment statuses. Perform initial data exploration to understand trends and distributions.\nFeature Engineering:\nIdentify and create features that predict loan default, such as credit utilization rates, loan amounts, debt-to-income ratios, and repayment history. Additional features may be extracted from loan purposes, borrower behavior, and economic indicators.\nModel Selection:\nEvaluate different classification algorithms, such as logistic regression, decision trees, random forests, and gradient boosting, to predict loan defaults. Consider the importance of model interpretability for business stakeholders.\nTraining and Validation:\nTrain the model on historical loan data using techniques like cross-validation to ensure performance consistency and to prevent overfitting.\nHyperparameter Tuning:\nOptimize model parameters to improve predictive accuracy. Techniques like grid search or random search can be used to fine-tune the model's performance.\nEvaluation Metrics:\nMeasure the model\u2019s performance using relevant metrics such as precision, recall, F1-score, and ROC-AUC, ensuring that both default risk and rejection risk are minimized in alignment with business goals.\nAbout the Dataset\nThe dataset includes historical loan data from Lending Club, with key features such as borrower income, credit score, loan amounts, loan purposes, and repayment history. It is structured to allow for efficient analysis and model building.\nGiven the size of t",
+    "criteria": [
+      {
+        "name": "Dataset Overview",
+        "description": "Provides a comprehensive and detailed overview of all key features, target variables, and data types. Clear understanding of dataset structure and context is demonstrated."
+      },
+      {
+        "name": "Data loading and pre-processing",
+        "description": "Thorough handling of missing data, outliers, and appropriate encoding/scaling. Demonstrates thoughtful feature selection and engineering to improve model performance."
+      },
+      {
+        "name": "Exploratory Data Analysis (EDA)",
+        "description": "In-depth analysis using both statistical methods and visualizations. Patterns, anomalies, and insights are clearly documented and used to guide modeling."
+      },
+      {
+        "name": "Model Selection",
+        "description": "Thorough comparison of multiple models with appropriate justification for final selection. Models are well-aligned with the problem."
+      },
+      {
+        "name": "Hyperparameter Tuning",
+        "description": "Extensive hyperparameter optimization using appropriate techniques (e.g., grid search). Clear improvements in model performance are demonstrated."
+      },
+      {
+        "name": "Model Evaluation",
+        "description": "Rigorous evaluation using appropriate metrics (precision, recall, F1-score, ROC-AUC) with clear interpretation of results. Robust cross-validation is applied."
+      },
+      {
+        "name": "Result Analysis and Future Work",
+        "description": "Detailed analysis of model strengths and weaknesses. Provides actionable suggestions for future improvements, demonstrating a deep understanding of the problem."
+      }
+    ]
+  },
+  {
+    "id": "imdb-cinebot",
+    "category": "case-study-2",
+    "title": "CineBot - IMDB Movie Chatbot",
+    "description": "Build a conversational AI chatbot for movie discovery using NLP and LLMs. Implement RAG with FAISS for fast movie retrieval, GPT integration for conversational responses, and deploy via Gradio/Streamlit.",
+    "fullContent": "CineBot - An IMDB Movie Chatbot\nProject Outline:\nBackground\nThe entertainment industry has seen a surge in demand for intelligent recommendation systems and conversational AI tools. Movie enthusiasts often search for recommendations, plot summaries, actor details, and genre-specific films. However, navigating vast databases like IMDb manually can be time-consuming and overwhelming.\nBusiness Problem\nThe current methods for discovering movies involve:\nManual Search: Users rely on IMDb, Rotten Tomatoes, and Wikipedia, which require keyword-based searches.\nGeneric Recommendations: Streaming services suggest movies but lack interactive engagement.\nLimited Personalization: Existing platforms provide static recommendations without contextual understanding.\nA Movie Chatbot aims to bridge this gap by leveraging Natural Language Processing (NLP) and Large Language Models (LLMs) to provide an interactive, conversational way to explore movie data.\nKey Business Objectives\nInteractive Movie Search: Allow users to search for movies based on genre, actors, plot summaries, or reviews through natural conversation.\nPersonalized Movie Recommendations: Suggest movies based on user preferences and previous interactions.\nEnhanced User Experience: Provide instant responses with insights such as ratings, reviews, and movie details.\nAutomation & Efficiency: Reduce manual search effort and provide contextual responses using an AI-powered assistant.\nMachine Learning & NLP Problem\nThe goal is to build a chatbot that understands natural language queries and retrieves relevant movie information from an IMDb dataset. The chatbot should:\nProcess user inputs conversationally.\nRetrieve and display relevant movie details.\nHandle follow-up questions and refine responses dynamically.\nTechnical Objectives\n1. Data Collection & Preprocessing\nLoad IMDb movie data, including titles, genres, ratings, and cast information.\n2. Model Selection & Processing\nImplement OpenAI\u2019s GPT model for natural language understanding.\nUse retrieval-based approaches like FAISS (Facebook AI Similarity Search) for fast movie matching.\nFine-tune prompts to fetch relevant movie details based on user input.\n3. Query Handling & Response Generation\nConvert user queries into structured search terms.\nRetrieve matching movies using similarity search on vector embeddings.\nGenerate responses in conversational format using LLMs.\n4. Deployment & Integration\nDeploy chatbot via a web interface (Gradio/Streamlit) for user interaction.\nStore historical conversations for personalized recommendations.\nIntegrate Google Drive storage for dataset retrieval.\nAbout the Dataset\nThe IMDb dataset contains:\nTitle (String) \u2013 The name of the movie.\nIMDb Rating (Float) \u2013 The average audience rating.\nYear (Integer) \u2013 The release year of the movie.\nCertificates (String) \u2013 The movie's age rating (e.g., PG, PG-13, R).\nGenre (String) \u2013 The primary category of the movie (e.g., Adventure, Biography, Documentary).\nDirector (String) \u2013 The name of the movie's director.\nStar Cast (String) \u2013 Key actors featured in the movie.\nMetaScore (Float) \u2013 The movie's Metacritic score.\nPoster-src (String) \u2013 The URL for the movie's poster image.\nDuration (Float) \u2013 The total runtime of the movie in minutes.\nDataset Source: IMDb Database (stored in Google Drive as IMDb_Dataset.csv)\nDeliverables\nA Jupyter Notebook containing:\nDataset Overview:\nSummary of features and key insights.\nExploratory Data Analysis (EDA):\nDistribution of genres, ratings, and keyword trends.\nData Preprocessing & Feature Engineering:\nHandling missing values, and vectorizing text.\nModel Implementation:\nUsing GPT API for chatbot interactions.\nRetrieving movie details efficiently with FAISS/Vector Search.\nChatbot Interface:\nInteractive UI (Gradio/Streamlit) for users to input queries.\nEvaluation & Future Work:\nPerformance analysis.\nPotential improvements (e.g., multimodal search, real-time recommendations).\nUsing agentic AI architecture\nExpected Outcomes\nSeamless user experienc",
+    "criteria": [
+      {
+        "name": "LLM Integration & Prompt Engineering",
+        "description": "Seamless integration with OpenAI\u2019s API; well-crafted prompts ensure accurate and engaging responses. Handles various query types effectively."
+      },
+      {
+        "name": "Retrieval & Search Efficiency",
+        "description": "Efficiently retrieves the most relevant movie data using FAISS/vector search. Handles both title-based and descriptive queries accurately."
+      },
+      {
+        "name": "Conversational Flow & Query Handling",
+        "description": "Supports multi-turn conversations, follow-up queries, and context retention. Adapts to user input dynamically and refines responses."
+      },
+      {
+        "name": "Movie Data Representation & Formatting",
+        "description": "Displays movie details (title, genre, actors, ratings, descriptions) in a structured and user-friendly manner. Uses markdown formatting or a clean UI."
+      },
+      {
+        "name": "Handling of Edge Cases & Error Responses",
+        "description": "Gracefully handles invalid inputs, typos, or unsupported queries with informative messages instead of failing."
+      },
+      {
+        "name": "User Interface & Deployment (Gradio/Streamlit)",
+        "description": "Intuitive, well-designed chatbot interface with smooth interaction. Fast response times, clear buttons, and efficient user experience."
+      },
+      {
+        "name": "Code Structure & Documentation",
+        "description": "Clean, modular code with clear function descriptions, comments, and well-organized notebook sections. Easy to understand and extend."
+      },
+      {
+        "name": "Creativity & feature Enhancement",
+        "description": "Implements advanced features like multi-agent workflows (e.g., separate agents for movie search, review analysis, and genre-based recommendations), trending movie suggestions, interactive quizzes, voice-based search, or multimodal input (text + images/video trailers). Enhances chatbot interactivity "
+      }
+    ]
+  },
+  {
+    "id": "flagship-blue-horizon",
+    "category": "capstone-flagship",
+    "title": "Blue Horizon AI Concierge",
+    "description": "AI-powered travel concierge using NLP and recommendation systems for personalized travel planning, itinerary generation, and real-time travel assistance.",
+    "fullContent": "Blue Horizon AI Concierge\nDevelop a conversational AI assistant for Blue Horizon to enhance customer service through automated bookings, personalized recommendations, and efficient handling of inquiries.\nProject Summary\nThis repository houses the code for an AI-powered concierge designed to enhance customer service at Blue Horizon Luxury Hotel. The system leverages a multi-agent architecture to handle various tasks, including:\nRoom and Restaurant Bookings: Automate reservations with personalized options.\nService Appointments: Schedule spa treatments, in-room dining, and other services.\nLocal Recommendations: Provide personalized recommendations for nearby attractions, restaurants, and activities.\nFAQ Handling: Answer common guest inquiries about hotel policies, amenities, and services.\nThe project utilizes a combination of:\nLarge Language Models (LLMs): For natural language understanding, response generation, and decision-making.\nVector Databases: To store and retrieve relevant hotel information efficiently.\nPostgreSQL Database: For storing and managing hotel operational data.\nSpeech-to-Text (STT) and Text-to-Speech (TTS): To enable seamless voice interactions with the AI concierge.\nStreamlit: To create a user-friendly interface.\nThis project aims to improve customer satisfaction, reduce wait times, and enhance the overall guest experience at Blue Horizon.\nKey Features\nMulti-agent architecture for handling diverse customer requests.\nPersonalized recommendations based on guest preferences and interests.\nSeamless voice interaction for a natural and intuitive user experience.\nIntegration with hotel systems for real-time booking and service updates.\nVector-based knowledge retrieval for efficient FAQ and recommendation handling.\nComprehensive data model for managing hotel operations.\nPrerequisites\nPython 3.12+\nPostgreSQL 14+\nPoetry for dependency management\nInstallation\nCreate and activate virtual environment:\npython3 -m venv .venv\nsource .venv/bin/activate\nInstall dependencies:\npoetry lock\npoetry install\nSet up environment variables:\n# Create .env file with the following variables\nDB_USER=postgres\nDB_PASSWORD=postgres\nDB_HOST=localhost\nDB_PORT=5432\nDB_NAME=blue_horizon\nDatabase Setup\nInstall PostgreSQL and create database:\ncreatedb blue_horizon\ncreatedb blue_horizon_test\nRun database migrations:\npython -m blue_horizon.migrations.create_database\nLoad initial data:\npython -m blue_horizon.migrations.data_loader\nCreate knowledge base indices:\npython -m blue_horizon.migrations.create_knowledge_base_indices\nData Model\nThe system uses a comprehensive data model to manage hotel operations:\nCustomers: Guest information and preferences\nRooms: Room details, availability, and pricing\nBookings: Room, restaurant, and event bookings\nServices: Hotel services and appointments\nStaff: Staff information and schedules\nEvents: Event spaces and bookings\nKnowledge Bases: FAQs and local recommendations\nTesting\nRun all tests:\npytest\nRun specific test categories:\n# Database tests\npytest blue_horizon/tests/test_database.py\n# Data loader tests\npytest blue_horizon/tests/test_data_loader.py\n# Migration tests\npytest blue_horizon/tests/test_migration.py\nTest coverage includes:\nDatabase operations and queries\nData loading and validation\nDatabase migrations\nKnowledge base operations\nNatural language processing\nVector search functionality\nDevelopment\nProject Structure\nblue_horizon/\n\u251c\u2500\u2500 database/        # Database operations and models\n\u251c\u2500\u2500 migrations/      # Database migrations and data loading\n\u251c\u2500\u2500 search/          # Vector search and knowledge base\n\u251c\u2500\u2500 tests/           # Test suite\n\u2514\u2500\u2500 utils/           # Utility functions\nAdding New Features\nCreate new models in blue_horizon/migrations/models.py\nUpdate database operations in blue_horizon/database/database.py\nAdd corresponding tests in blue_horizon/tests/\nUpdate data loaders if needed in blue_horizon/migrations/data_loader.py\nContributing\nFork the repository\nCreate a feature branch\nMake your changes\nAdd tests for new",
+    "criteria": [
+      {
+        "name": "Code Readability & Organization",
+        "description": "10.0"
+      },
+      {
+        "name": "Code Reusability & Modularity",
+        "description": "10.0"
+      },
+      {
+        "name": "Error Handling & Debugging",
+        "description": ""
+      },
+      {
+        "name": "Database Connection Handling",
+        "description": "10.0"
+      },
+      {
+        "name": "SQL Query Efficiency",
+        "description": "10.0"
+      },
+      {
+        "name": "AI Query Processing",
+        "description": ""
+      },
+      {
+        "name": "Agent Building & Integration",
+        "description": "10.0"
+      },
+      {
+        "name": "Multi-Agent System",
+        "description": "10.0"
+      },
+      {
+        "name": "Session & Query Memory",
+        "description": "10.0"
+      },
+      {
+        "name": "Accuracy & Trustworthiness",
+        "description": "10.0"
+      },
+      {
+        "name": "Deployment & Scalability",
+        "description": "10.0"
+      },
+      {
+        "name": "UI & Usability",
+        "description": "10.0"
+      },
+      {
+        "name": "Unique Enhancements / Additional Features (Bonus 10 pts)",
+        "description": "10*"
+      }
+    ]
+  },
+  {
+    "id": "flagship-cybershield",
+    "category": "capstone-flagship",
+    "title": "CyberShield AI",
+    "description": "AI cybersecurity system for threat detection, PII protection and processing, and intelligent security monitoring using LLM-based agents and ReAct architecture.",
+    "fullContent": "Cyber Shield AI\nA Cybersecurity Conversational Agent\nIntroduction\nIn today\u2019s digital landscape, organizations face growing cybersecurity challenges while handling sensitive data such as Personally Identifiable Information (PII). The increasing reliance on APIs, AI-driven systems, and conversational agents raises concerns about data security, threat detection, and privacy compliance.\nTraditional security solutions often lack context-aware PII protection and multimodal capabilities, making it difficult to safeguard AI-driven interactions. A lack of robust security measures exposes organizations to risks such as data breaches, identity theft, and financial losses.\nBusiness Problem & the Impact\nChallenges in Cybersecurity & AI-Driven PII Protection\nPII Vulnerability: Many organizations are integrating AI-driven conversational agents and automation tools, but these models lack robust mechanisms to detect and protect PII effectively. Current models may inadvertently expose sensitive data (e.g., financial details, health records, or personal identifiers).\nIntegration Challenges with Security APIs: Real-time cybersecurity threat detection relies on external security APIs like Shodan, VirusTotal, and AbuseIPDB, but existing AI systems struggle with seamless integration, limiting their ability to proactively detect and mitigate threats.\nSecurity Risks in LLM-Powered Agents: AI agents must understand user intent while ensuring security, but they often lack the ability to prevent data leaks, unauthorized access, and adversarial exploitation.\nMultimodal Complexity: AI systems increasingly process both text and image-based user inputs, but ensuring security and preventing information leaks across multiple data formats remains a challenge.\nScalability & Enterprise Security Compliance: Deploying AI solutions at scale in large enterprises requires stringent security compliance, real-time monitoring, and logging capabilities, but many current implementations lack standardized security frameworks and auditing mechanisms.\nKey Business Goals\nEnhance cybersecurity by integrating threat intelligence APIs for real-time risk detection.\nBuild a privacy-preserving AI agent that detects, masks, and protects PII during interactions.\nDevelop a scalable, interactive system that supports both text and image-based queries while maintaining high-security standards.\nList of Companies leveraging Generative AI for cybersecurity:\nPreamble \u2013 Provides AI safety tools to detect and mitigate prompt injection attacks in LLM deployments.\nDeep Instinct \u2013 Uses deep learning to prevent malware, zero-day attacks, and advanced cybersecurity threats.\nAporia \u2013 Developed AI \"Guardrails\" to enhance chatbot security, privacy controls, and prevent data leaks.\nSocket \u2013 AI-powered threat detection for open-source code, preventing supply chain attacks.\nCounterCraft \u2013 Uses AI-driven deception technology to detect and analyze cyber threats proactively.\nWho Can Benefit from CyberShield AI?\nKey Problem Statement\nDevelop a secure, AI-powered cybersecurity assistant that integrates threat intelligence APIs, detects and protects PII in conversations, and supports multimodal interactions. The system should ensure real-time security, scalable deployment, and compliance with privacy standards.\nCore Objectives\nPII Detection & Masking \u2013 Implement regex-based and NLP-driven PII detection using SpaCy.\nSecurity API Integrations \u2013 Integrate Shodan, VirusTotal, and AbuseIPDB to enhance cybersecurity awareness.\nLLM Integration & Context Management \u2013 Use OpenAI\u2019s API & ReAct techniques for secure AI-driven interactions.\nMultimodal Capability \u2013 Support both text and image-based threat analysis for a robust security assistant.\nSecure Architecture & Deployment \u2013 Implement backend security, authentication, and performance optimizations.\nInteractive UI & Visualization \u2013 Develop a Flask/FastAPI-based system with a user-friendly Streamlit/Gradio frontend.\nKey Learning Outcomes\nProject Plan & Milestones:\nWeek ",
+    "criteria": [
+      {
+        "name": "Development Fundamentals & API Integration (10%)",
+        "description": "All API integrations are properly implemented with robust error handling. Security best practices are followed throughout. Authentication is properly managed and secured. All basic functions (Shodan, VirusTotal, AbuseIPDB) work flawlessly."
+      },
+      {
+        "name": "PII Protection & Processing (30%)",
+        "description": "Advanced PII detection using both regex and NLP approaches. Comprehensive masking system with perfect accuracy. Handles all common PII types correctly. SpaCy integration is optimal with custom entity recognition."
+      },
+      {
+        "name": "Agent Implementation & LLM Integration (35%)",
+        "description": "Perfect implementation of ReACT architecture. Seamless OpenAI API integration. Excellent context management. Robust error handling. Agent shows intelligent decision-making capabilities. Image to text support"
+      },
+      {
+        "name": "Web Application & Deployment (20%)",
+        "description": "Professional-grade web interface with excellent UX. Robust security features including proper authentication. Perfect API integration. Comprehensive logging. Successfully deployed with Docker support."
+      },
+      {
+        "name": "Documentation & Code Quality (5%)",
+        "description": "Comprehensive documentation including API references, setup guides, and architecture diagrams. Clean, well-commented code following PEP 8. Excellent test coverage. Detailed logging implementation."
+      }
+    ]
+  },
+  {
+    "id": "flagship-healthsense",
+    "category": "capstone-flagship",
+    "title": "HealthSense AI",
+    "description": "AI-powered health monitoring and prediction system for early disease detection, personalized health insights, and patient data analysis.",
+    "fullContent": "Healthsense AI\nAI-Driven Multi-Agent Healthcare System\nIntroduction & Motivation\nThe integration of Generative AI (GenAI) and Large Language Models (LLMs) has significantly transformed the healthcare sector by enabling advanced natural language processing, improving access to medical information, and streamlining patient interactions. AI-powered solutions can assist in diagnosing conditions, providing health recommendations, and offering 24/7 support to patients.\nDespite the abundance of medical knowledge, accessing personalized and reliable health information remains a challenge. Many existing healthcare systems provide generic responses and lack contextual awareness. HealthSense AI is designed to bridge this gap by leveraging LLMs and the LangChain framework to offer intelligent, context-aware health information assistance.\nBusiness Problem Overview and Potential Impact\nChallenges in Healthcare Information Systems\nLimited Personalization \u2013 Most healthcare information systems provide one-size-fits-all responses that lack user-specific relevance.\nLack of Context Awareness \u2013 Many AI assistants struggle to maintain conversation history and context over multiple interactions.\nFragmented Information Sources \u2013 Medical knowledge is scattered across multiple databases, making it difficult to consolidate accurate information efficiently.\nWho Can Benefit from HealthSense AI?\nPotential Impact\nStartups such as Babylon Health, Ada Health, and Buoy Health are already leveraging AI to enhance healthcare delivery. HealthSense AI aims to build upon this trend by providing context-aware, real-time, and interactive healthcare assistance, improving patient outcomes and reducing the burden on healthcare professionals.\nKey Problem Statement\n\u201cDevelop an intelligent healthcare platform that streamlines medical service discovery and booking by analyzing hospital data, reviews, and healthcare metrics.\nThe system will extract and compare key parameters to help users make informed healthcare decisions.\nThe solution will feature a comprehensive comparison engine for hospitals and diagnostic centers, an automated slot booking system, and detailed information about medical tests and procedures. The platform will incorporate a user-friendly chat interface to hospital comparisons, explore healthcare metrics, and facilitate seamless appointment scheduling.\u201d\nCore Objectives\nImplement Natural Language Processing (NLP) \u2013 Accurately interpret and process medical terminology.\nDevelop Context-Aware Responses \u2013 Maintain dialogue history for better interaction continuity.\nEnable Multi-Source Integration \u2013 Pull data from reliable medical knowledge bases.\nProvide Real-Time Doctor and Hospital Recommendations \u2013 Offer users relevant medical support.\nEnsure Compliance and Ethical AI Usage \u2013 Maintain HIPAA and GDPR compliance.\nSystem Features\nHere's a structured breakdown of system features for HealthSense:\nData Processing & Analysis:\nLoad and process healthcare provider data, including hospitals, and\ndiagnostic info\nImplement loading data from csv into mySQL\nHealthcare Provider Comparison & Recommendation:\nGenerate comprehensive comparison metrics across healthcare facilities\nDevelop personalized recommendation system based on user preferences and requirements\nAppointment Management System:\nReal-time slot availability tracking\nDiagnostic Services Information:\nMaintain comprehensive test catalog with detailed descriptions\nProvide preparation guidelines for various tests\nInteractive UI & Dashboards:\nDevelop user-friendly interface for healthcare service exploration\nKey Learning Outcomes\nThis project equips learners with high-demand AI and healthcare tech skills, including:\nLarge Language Model Integration: Master integration of LLMs using LangChain for intelligent healthcare service recommendations and natural language processing of medical queries.\nHealthcare Data Engineering: Develop expertise in handling medical data,including synthetic data generation, database schema d",
+    "criteria": [
+      {
+        "name": "Code Readability & Organization",
+        "description": "10.0"
+      },
+      {
+        "name": "Code Reusability & Modularity",
+        "description": "10.0"
+      },
+      {
+        "name": "Error Handling & Debugging",
+        "description": ""
+      },
+      {
+        "name": "Database Connection Handling",
+        "description": "10.0"
+      },
+      {
+        "name": "SQL Query Efficiency",
+        "description": "10.0"
+      },
+      {
+        "name": "AI Query Processing",
+        "description": ""
+      },
+      {
+        "name": "Agent Building & Integration",
+        "description": "10.0"
+      },
+      {
+        "name": "Multi-Agent System",
+        "description": "10.0"
+      },
+      {
+        "name": "Session & Query Memory",
+        "description": "10.0"
+      },
+      {
+        "name": "Accuracy & Trustworthiness",
+        "description": "10.0"
+      },
+      {
+        "name": "Deployment & Scalability",
+        "description": "10.0"
+      },
+      {
+        "name": "UI & Usability",
+        "description": "5.0"
+      },
+      {
+        "name": "Unique Enhancements / Additional Features (Bonus 10 pts)",
+        "description": "5*"
+      }
+    ]
+  },
+  {
+    "id": "flagship-binsense",
+    "category": "capstone-flagship",
+    "title": "BinSense AI - Amazon Bin Classifier",
+    "description": "Computer vision system for classifying items in Amazon warehouse bins using CNN models, transfer learning, and object detection for inventory management.",
+    "fullContent": "4 - BinSense AI\nAI for faster validation, packaging, and inventory management\nMotivation\nThe e-commerce industry is growing unprecedentedly, leading to an increased demand for efficient inventory management and order fulfillment processes. One critical aspect of this process is accurately identifying items within bins or baskets, determining their quantities, estimating packaging sizes, and updating inventory availability in real time. Manual identification of items, their size estimation and feeding this information into the inventory management system are time-consuming; leading to suboptimal packaging and inefficient inventory management. The rapid growth of e-commerce demands innovative solutions for optimizing logistics, reducing packaging waste, and enhancing operational efficiency and customer satisfaction. The automation of item identification, quantity validation, and packaging size estimation while simultaneously updating inventory and availability can significantly improve operational efficiency. This project aims to do this automation by leveraging computer vision technology. Students are expected to develop this product with intrinsic features like simple interactive UI with a very well-integrated computer vision model.\nDataset details\nThe Amazon Bin Image Dataset contains over 535K images and metadata from bins of a pod in an operating Amazon Fulfillment Center. The bin images in this dataset are captured as robot units carrying pods as part of normal Amazon Fulfillment Center operations.\nYou can find more details about the dataset here\nImages:\nAbove are some typical images in the dataset S3 bucket \u2018aft-vbi-pds\u2019 and \u2018/bin-images\u2019 prefix.\nA bin contains multiple object categories and various numbers of instances. The size of bins varies depending on the size of the objects in them. The tapes in front of the bins prevent the items from falling out of them; sometimes, this might make the objects unclear. Objects are sometimes heavily occluded by other objects or limited viewpoints of the images.\nMetadata:\nThe corresponding metadata for each bin image includes the item identification (Amazon Standard Identification Number, ASIN), quantity, height, length, width, weights.\nUnderstanding the Image and its metadata is crucial before you develop the solution. Some examples can be found here.\nDataset you should use for this project: https://docs.google.com/spreadsheets/d/1gbHWgwYr7xn-rIuZn2LB1lvfXQgDZH1y/edit?usp=drive_link&ouid=109053716537847093321&rtpof=true&sd=true\nThe dataset is a list of images and metadata file names without .jpg and .json extension from the AWS S3 bucket which you should download and use for this project.\nObjectives\nCore objectives of this project:\nUse the dataset (images + metadata) and develop a highly accurate and fast computer vision model to verify if the items with their respective quantities are present in the image of the bin.\nFor example, You get an order for 3 items and their quantities as mentioned below.\nNow, you get an image of the bin where items in the order are present. Your objective is to validate whether the items in the order are the ones in the bin.\nDemonstrate creativity and innovative mindset while working on EDA, data preparation, model selection, application and evaluation, etc.\nDevelop a simple UI using tools/frameworks of your choice for:\nAllowing the user to select an item and its quantity he/she wants to order.\nSelecting the most appropriate image from the dataset which corresponds to order and displaying in the UI.\nUsing the CV model for inferencing and displaying the results of the model to validate if items and its respective quantity in order exists in the bin image.\nCreate a comprehensive presentation and documentation that explains the understanding of objectives, methodology, architecture, decisions, milestones, model selection, hyperparameter tuning and evaluation performed, UI functionality and considerations for MLOps (model deployment, model monitoring and re",
+    "criteria": [
+      {
+        "name": "Understanding of Objective (Weightage: 20)",
+        "description": "Demonstrate a clear and thorough understanding of the objectives and emphasizes on building an highly accurate, efficient and productionized CV based system for detecting if the item with its respective quantity is present in the bin image."
+      },
+      {
+        "name": "Selection and application of CV models (Weightage: 20)",
+        "description": "Performed detailed EDA on image data and research/application of the 3/3+ CV models which are suitable for this problem. Demonstrate a well-designed experimental plan to select and apply various CV models on the data."
+      },
+      {
+        "name": "Evaluation of CV models (Weightage: 20)",
+        "description": "Selects and uses the classification metrics like accuracy, confusion matrix, precision, recall, ROC-AUC, etc. judiciously. Justify the metric choices and ensure that they are insightful and align with the objectives and characteristics of the dataset and expected results. Displays images with their "
+      },
+      {
+        "name": "Innovation and creativity (Weightage: 8)",
+        "description": "Demonstrate highly innovative and unique approaches of EDA, model selection/evaluation. Showcase creativity in integrating existing technologies and proposing an innovative solution, breaking away from traditional methods. Implement thoughtful and highly feasible enhancements, considering the projec"
+      },
+      {
+        "name": "Presentation and Documentation (Weightage: 7)",
+        "description": "Clear and well-organized presentation of the project, including detailed documentation for understanding of objectives, methodology, architecture, decisions, milestones, model selection, hyperparameter tuning and evaluation performed, UI functionalities and considerations for MLOps (model deployment"
+      },
+      {
+        "name": "MLOps (Weightage: 15)",
+        "description": "Developed an efficient and automated deployment process with minimal downtime. The model monitoring is comprehensive and tracks the performance. Logging is done for predictions, errors, and system behavior."
+      },
+      {
+        "name": "UI/UX(Weightage: 10)",
+        "description": "Developed an intuitive, fast and easy to use interface which takes the inputs from user and responds back with analysis/results. Exceptions/errors are taken care of and are easy for the user to understand."
+      }
+    ]
+  },
+  {
+    "id": "flagship-smartshop",
+    "category": "capstone-flagship",
+    "title": "SmartShop AI",
+    "description": "AI shopping assistant with recommendation engine, conversational product search, and personalized commerce using NLP and collaborative filtering.",
+    "fullContent": "SmartShop AI\nAI-Driven Multi-Agent E-commerce System\nIntroduction & Motivation\nThe rise of AI in the e-commerce industry has transformed how users interact with online stores, enabling intelligent automation, personalization, and real-time customer assistance. While shopping for your favourite items, you might have often noticed how similar products show up when you are looking for a specific shirt or even a smartphone. Also, because you are shopping online, you can rely on multiple reviews and confirm the store policies before you purchase the product. Such an efficient system requires advanced AI systems to work and grow. Did you know,. In 2024, Walmart recorded about nearly 255 million customer visits per week, this is quite a lot! So how do companies manage so much business and yet stay on top against competitors? In this project you will learn some essential tasks that ecommerce businesses need to work on for serving their customers. In this project, Smartshop AI, you will learn how to enhance the shopping experience by leveraging multi agent AI systems for personalised product recommendations, price comparisons, summarising reviews and also assisting customers related to FAQs around store policy.\nKey Advantages of AI-Driven E-commerce:\nPersonalized Shopping with AI\nAI models analyze user interactions and preferences to provide tailored product recommendations.\nPersonalized suggestions improve customer engagement and satisfaction.\nMulti-Agent System for Efficient Customer Support\nSpecialized AI agents handle distinct tasks such as product discovery, price comparison, and FAQs.\nEnsures real-time assistance for an enhanced shopping experience.\nContext-Aware Decision Making\nAI-driven insights help users make informed purchasing decisions.\nSentiment analysis extracts key insights from customer reviews.\nBusiness Problem Overview and Potential Impact\nChallenges in E-commerce Customer Experience:\nLimited Personalization \u2013 Generic recommendations fail to meet user-specific preferences.\nLack of Efficient Price Comparisons \u2013 Buyers struggle to compare multiple brands and pricing effectively.\nInefficient Customer Support \u2013 Lack of context-aware AI leads to slow and ineffective support.\nReview Overload \u2013 Customers find it difficult to extract key insights from large volumes of product reviews.\nWho Can Benefit from SmartShop AI?\nPotential Impact\nStartups such as Vue.ai, Algolia, and Syte.ai already leverage AI for e-commerce personalization. SmartShop AI builds on this trend to create a context-aware, real-time, and automated AI shopping assistant, improving customer decision-making and satisfaction.\nKey Problem Statement\nDevelop an AI-powered e-commerce assistant that enhances shopping experiences through product recommendations, price comparisons, and customer review summarization. The system should feature an AI-driven recommendation engine, sentiment-based review summarization, real-time price comparison, and store policy automation, all accessible via a conversational AI interface.\nCore Objectives\nDevelop a AI system that understands and processes e-commerce queries in natural language.\nImplement a multi-agent AI framework for specialized task delegation.\nCreate a recommendation engine that suggests personalized products based on customer behavior.\nBuild an AI-powered review summarization agent to extract key insights from customer feedback and reviews.\nDevelop a price and feature comparison agent to assist customers in choosing the best products.\nDeploy a scalable, cloud-ready AI solution with API and UI integration for the entire smartshop AI project This will help you understand how to deploy projects with multi agents in real world scenarios.\nSystem Features\nData Processing & Analysis:\nLoad and process product catalog and pricing data.\nImplement data ingestion from CSV into PostgreSQL/NoSQL databases.\nE-commerce Assistance & AI Agents:\nProduct Recommendation Agent: AI-based personalized product suggestions.\nReview Summarizati",
+    "criteria": [
+      {
+        "name": "Code Readability & Organization",
+        "description": "10.0"
+      },
+      {
+        "name": "Code Reusability & Modularity",
+        "description": "10.0"
+      },
+      {
+        "name": "Error Handling & Debugging",
+        "description": ""
+      },
+      {
+        "name": "Database Connection Handling",
+        "description": "10.0"
+      },
+      {
+        "name": "SQL Query Efficiency",
+        "description": "10.0"
+      },
+      {
+        "name": "AI Query Processing",
+        "description": ""
+      },
+      {
+        "name": "Agent Building & Integration",
+        "description": "10.0"
+      },
+      {
+        "name": "Multi-Agent System",
+        "description": "10.0"
+      },
+      {
+        "name": "Session & Query Memory",
+        "description": "10.0"
+      },
+      {
+        "name": "Accuracy & Trustworthiness",
+        "description": "10.0"
+      },
+      {
+        "name": "Deployment & Scalability",
+        "description": "10.0"
+      },
+      {
+        "name": "UI & Usability",
+        "description": "5.0"
+      },
+      {
+        "name": "Unique Enhancements / Additional Features (Bonus 10 pts)",
+        "description": "5*"
+      }
+    ]
+  },
+  {
+    "id": "flagship-trendsetter",
+    "category": "capstone-flagship",
+    "title": "TrendSetter AI",
+    "description": "AI system for trend analysis and prediction using graph-based feature engineering, social network analysis, and ensemble ML models.",
+    "fullContent": "Trend Setter AI\nUnveiling Key Players in Social Network\nProblem Statement\nDevelop an AI system to identify key influencers in social networks by analyzing user interactions and structural relationships using graph-based data. The system will extract local structural features from nodes, such as connectivity patterns and neighborhood properties, and apply clustering techniques to uncover users with high influence potential. These insights will be used to identify similar nodes, ensuring continuity if a replacement influencer is needed.\nThe solution will include an intuitive user interface to visualize the network, explore influencer metrics, and generate actionable insights for targeted marketing, partnerships, or content dissemination. It will prioritize scalability and usability to handle real-world, large-scale social networks effectively.\nTools\nNetworkX, iGraph, Python, Clustering Algorithms (e.g., K-Means, DBSCAN), Visualization Libraries (e.g., Matplotlib, Plotly), UI/UX frameworks such as Gradio, Streamlit, or Dash for interactive front-end development.\nAI-Powered Influencer Discovery in Social Networks\nDesign and implement a robust end-to-end system to identify key influencers in social networks using graph-based machine learning techniques. This system will analyze user interactions and structural relationships, extract node-level insights, rank influential nodes, and provide recommendations for replacements when required. By combining cutting-edge graph processing, clustering algorithms, and visualization tools, the project will deliver actionable insights to optimize influencer engagement strategies.\nSystem Features:\n1. Graph Analysis & Feature Extraction:\n\u25cb Load and process real-world social graph data.\n\u25cb Extract local node features (e.g., neighborhood connectivity and structural properties) for influence assessment.\n2. Influencer Identification & Ranking:\n\u25cb Identify and rank nodes with high influence potential based on graph-derived features.\n\u25cb Generate replacement suggestions for influencers with similar network properties.\n3. Clustering & Insights:\n\u25cb Group influencers with similar characteristics using clustering algorithms. \u25cb Summarize network trends to aid in influencer segmentation and strategic planning.\n4. Interactive UI & Visualization:\n\u25cb Develop an intuitive interface for graph exploration and influence analysis. \u25cb Provide visualizations of influencer rankings, clusters, and relationships. 5. Scalability & Deployment:\n\u25cb Ensure scalability to handle large real-world datasets.\n\u25cb Deploy the solution as a lightweight, cloud-ready application.\nReal-World Applications:\n1. Marketing & Advertising: Identify top influencers for targeted campaigns and discover backups for continuity.\n2. Product Launches: Leverage influencer insights to design niche-specific outreach strategies.\n3. Content Creation: Analyze network relationships to suggest collaboration opportunities. 4. Social Network Analysis: Uncover patterns in user behavior for social media platforms or research applications.\nMachine Learning Techniques:\n\u25cf Graph-based feature extraction and neighborhood analysis.\n\u25cf Clustering algorithms (K-Means, DBSCAN, hierarchical clustering).\n\u25cf Node ranking methods for influence scoring.\n\u25cf Visualization-driven data analysis for graph insights.\nTech Stack:\n\u25cf Graph Libraries: NetworkX, iGraph.\n\u25cf Clustering & ML: Scikit-learn, PyCaret.\n\u25cf Visualization Tools: Plotly, Cytoscape.js, NetworkX for interactive graph exploration. \u25cf UI Development: Gradio, Streamlit, Dash for seamless, user-friendly interfaces.\n\u25cf Deployment: Docker for containerization; AWS/GCP/Azure for cloud deployment.\nKey Learning Outcomes:\n1. Hands-On Graph ML: Gain expertise in graph-based machine learning for analyzing social networks and deriving actionable insights.\n2. Advanced Feature Engineering: Master graph feature extraction, focusing on neighborhood metrics and local structural properties.\n3. End-to-End System Building: Learn how to design, implement, an",
+    "criteria": [
+      {
+        "name": "Milestone 1:  Problem Statement & Project Initialization",
+        "description": "Clarity and Scope Definition"
+      },
+      {
+        "name": "Milestone 2:  EDA & Graph-Based Feature Engineering",
+        "description": "EDA Quality"
+      },
+      {
+        "name": "Milestone 3:  Model Building & Hyperparameter Tuning",
+        "description": "Model Implementation"
+      },
+      {
+        "name": "Milestone 4:  Observations & Influencer Extraction",
+        "description": "Insights from Clusters"
+      },
+      {
+        "name": "Milestone 5:  Streamlit App Development (UI/UX)",
+        "description": "App Functionality"
+      },
+      {
+        "name": "Milestone 6: Documentation",
+        "description": "Completeness"
+      }
+    ]
+  },
+  {
+    "id": "flagship-browser-analytics",
+    "category": "capstone-flagship",
+    "title": "Web Browser Analytics",
+    "description": "Data analytics project for understanding user behavior, device type prediction, lifecycle analysis, and audience segmentation from web browser usage data.",
+    "fullContent": "Web Browser Analytics\nDecoding the Secrets of Mobile Engagement\nInsights into User Behavior\nIntroduction\nWe are currently witnessing a significant shift in platforms concerning how consumers access the Internet, interact with each other, and ultimately engage with businesses. Mobile devices have become the dominant force in the digital realm. A new generation of consumers anticipates mobile platforms to offer all the functionalities previously available (and even some that were not) on desktops. Marketers now recognize the importance of delivering contextually relevant mobile content and experiences as crucial components of their consumer engagement strategies. This, in turn, fosters long-term loyalty and drives numerous positive business outcomes.\nUnderstanding the breadth and depth of consumer engagement in a multi-device, data-rich environment is a pressing research area, especially given the complexities introduced by mobile usage. There is limited understanding of how consumers utilize mobile phones for information search and consumption. Understanding these dynamics is essential for the success of engagement strategies, as it hinges on comprehending individual mobile usage patterns for content consumption. Moreover, diverse users may execute tasks in varying ways. Therefore, marketers must grasp the fundamental dynamics of mobile usage for information retrieval, processing, content consumption, and subsequent intentions or behavioral outcomes. This comprehension aids marketers in structuring mobile apps and websites effectively and delivering marketing communications across multiple touchpoints to engage consumers and drive action.\nProblem Statement and Dataset\nYou will receive internet browsing data from a prominent mobile browser, accessed by millions each month, offering a compelling opportunity to analyze consumer behaviors during browsing sessions. The dataset provided includes information such as user identifiers, country of origin, visited domains, device name and specifications (screen width and height), domain categories, installation dates, and page views.\nWe have identified three primary research avenues with direct business implications and substantial support for product development and market strategies.\nDevice Type Prediction\nPredict the type of device (Android, iOS, or Others) based on various features available in the dataset. This prediction can help in understanding the distribution of different device types among users and tailor product development and marketing strategies accordingly.\nUnderstanding User Lifecycle & Consumption Patterns\nInvestigate the trajectory of user engagement over time, shedding insights on customer aging and consumption patterns. Address key questions regarding user behavior and preferences, including:\nBrowser Usage Frequency and Lifespan\nWhat is the frequency of browser usage each month after a customer installs the client?\nWhat is the average lifespan of a customer?\nUser Engagement Metrics\nHow do users engage with the browser in terms of page views and session duration?\nWhat are the daily/weekly customer churn rates?\nGeographical and Device Analysis\nAnalyze the distribution of users per country and explore country-wise trends in screen size and device usage.\nDo users exhibit different browsing patterns across various devices and screen sizes?\nDomain Exploration Patterns\nWhat are the typical patterns of domain exploration during a browsing session?\nAre there recurring sequences of domains visited by users\nUser Consumption Characteristics\nIdentify usage metrics for users within a certain standard deviation from the mean.\nDetermine significant consumption patterns and user attributes for both low-volume and high-volume users.\nInvestigate changes in domain categories across different days of the week.\nCan we categorize the most frequently visited domains and domain categories by users?\nRegional and Device Preferences\nDo users from different countries exhibit preferences for spec",
+    "criteria": [
+      {
+        "name": "Device Type Prediction",
+        "description": "Demonstrates thorough understanding of relevant features such as user agent information, geographical location, and screen dimensions, developing a highly accurate predictive model."
+      },
+      {
+        "name": "Understanding User Lifecycle & Consumption Patterns",
+        "description": "Conducts comprehensive analysis utilizing  features such as timestamp, geographical location,  and number of pages visited, generating highly  insightful findings."
+      },
+      {
+        "name": "Audience Segmentation",
+        "description": "Applies appropriate clustering techniques utilizing features such as geographical location and domain visited, and conducts insightful analysis of audience dynamics."
+      },
+      {
+        "name": "Forecasting User Preferences",
+        "description": "Constructs informative complex features from features such as timestamp and geographical location, and develops highly effective models for forecasting user preferences."
+      },
+      {
+        "name": "Documentation and Presentation",
+        "description": "Produces clear, well-organized documentation and high-quality presentation materials incorporating detailed insights from features such as timestamp and geographical location."
+      }
+    ]
+  },
+  {
+    "id": "flagship-fraud-shield",
+    "category": "capstone-flagship",
+    "title": "Fraud Shield AI",
+    "description": "ML-based fraud detection system using ensemble models, anomaly detection, and feature engineering for identifying fraudulent financial transactions.",
+    "fullContent": "Fraud Shield AI - Capstone Project\nMotivation\nFraud detection is a critical pillar of financial security, especially as digital transactions continue to rise globally. With fraudsters employing increasingly sophisticated techniques, financial institutions must adopt cutting-edge AI-driven solutions to mitigate risks and protect customers. Traditional rule-based fraud detection methods often struggle to keep up with evolving fraud patterns, resulting in significant financial losses and eroded trust.\nCompanies like PayPal, Stripe, and Square use AI-powered fraud detection systems to analyze transaction behaviors in real time, flagging suspicious activities before they cause harm. Similarly, Visa's AI-driven fraud prevention system, Visa Advanced Authorization (VAA), monitors billions of transactions to detect anomalies indicative of fraudulent activities. These systems leverage machine learning, deep learning to identify fraudulent transactions while minimizing false positives.\nThis project aims to build a scalable, real-time fraud detection system integrating the latest AI techniques, including supervised learning, deep learning. By analyzing historical fraud data and continuously adapting to new threats, the system will ensure financial security and operational efficiency. Just as Amazon Web Services (AWS) Fraud Detector utilizes machine learning to protect e-commerce businesses from payment fraud, our solution will focus on both known fraud patterns and emerging threats, ensuring robust financial protection in a rapidly evolving digital landscape.\nProblem Statement\nThe objective is to design and implement a comprehensive fraud detection system capable of identifying fraudulent transactions with high accuracy and scalability. The system will leverage:\nSupervised learning to identify known fraud patterns from labeled historical data.\nDeep learning to model complex relationships and sequential transaction behaviors.\nThe solution will focus on minimizing false positives, maximizing fraud recall, and maintaining scalability for high-volume real-time transaction processing.\nKey Objectives\nBuild a comprehensive fraud detection system that can analyze individual financial transactions to assess whether they are fraudulent, identify potential anomalies in transaction patterns, and recognize emerging fraud schemes that deviate from historical data. The system should flag suspicious activities and try to provide insights into the reasons behind its decisions to ensure interpretability and trust.\nDevelop a robust ensemble of models that leverages diverse machine learning and deep learning techniques:\nUse supervised learning models such as Logistic Regression, Random Forest, and XGBoost to accurately detect known fraud patterns based on labelled historical data.\nImplement advanced deep learning architectures, including Feedforward Neural Networks (FNN), Long Short-Term Memory (LSTM) networks for sequential data analysis.\nDemonstrate innovation by building a hybrid detection framework that combines supervised learning, deep learning methods into a unified system. This framework should:\nOptimize fraud detection by leveraging the strengths of different techniques.\nProvide flexibility for incorporating new methods as fraud patterns evolve.\nDataset\nSource:\nCredit Card Transactions Fraud Detection Dataset (Kaggle)\nOverview:\nTotal Records: 1.3 million\nFeatures:\ndatetime: Transaction timestamp\ncc_num: Credit card number\namt: Transaction amount\nmerchant: Merchant name\nmerch_lat, merch_long: Merchant location coordinates\nlat, long: Cardholder's location coordinates\ncity_pop: Cardholder's city population\nis_fraud: Indicator of fraud (1 for fraudulent, 0 otherwise)\nThis dataset provides a realistic simulation of transaction data, blending fraudulent and non-fraudulent cases.\nScope\nDevelop a comprehensive fraud detection system that leverages cutting-edge machine learning and deep learning techniques to identify and prevent fraudulent transactions in ",
+    "criteria": [
+      {
+        "name": "EDA and Data Preparation (Weightage: 35%)",
+        "description": "Demonstrates an exceptional understanding of the dataset with comprehensive Exploratory Data Analysis (EDA), providing deep insights into fraud patterns. Data preparation is meticulous, with thorough cleaning, transformation, and feature engineering, ensuring the data is structured optimally for mod"
+      },
+      {
+        "name": "Model Development and Hyperparameter Tuning (Weightage: 35%)",
+        "description": "Implements a robust range of models, including supervised learning, deep learning. Hyperparameter tuning is performed efficiently with well-documented experiments to optimize performance. Demonstrates a clear understanding of trade-offs and evaluates models using comprehensive metrics. Provides code"
+      },
+      {
+        "name": "Web Application (Weightage: 5%)",
+        "description": "Delivers a highly intuitive and visually engaging web interface. The application works seamlessly, supporting real-time fraud detection with low latency. Includes additional features, feedback mechanisms, and visualizations, that enhance user interaction and usability. The design is innovative and u"
+      },
+      {
+        "name": "Creativity and Innovation (Weightage: 15%)",
+        "description": "Introduces innovative techniques, such as hybrid detection frameworks combining supervised, deep learning methods. Implements advanced features like fraud trend visualizations or drift detection. Demonstrates originality in solving challenges and enhancing the system's capabilities."
+      },
+      {
+        "name": "Solution Documentation (Weightage: 10%)",
+        "description": "Provides thorough and well-organized documentation, including step-by-step setup instructions, architecture diagrams, and detailed explanations of the entire implementation process. Documentation is clear, comprehensive, and easy to follow, enabling replication and further development."
+      }
+    ]
+  },
+  {
+    "id": "flagship-medibot",
+    "category": "capstone-flagship",
+    "title": "MediBot - AI Symptom Checker",
+    "description": "Gen AI medical chatbot for symptom checking using RAG architecture, multi-agent systems with ReAct, and medical knowledge retrieval with FAISS.",
+    "fullContent": "MediBot: Your AI-Powered Symptom Checker\nBusiness Problem\nThe healthcare industry has witnessed a significant transformation with the integration of Artificial Intelligence (AI), Machine Learning (ML), and Deep Learning (DL). These advancements have enabled AI-driven diagnostics, patient monitoring, and intelligent symptom analysis.\nHowever, despite the abundance of medical information, individuals often struggle to accurately interpret their symptoms and determine whether professional medical attention is necessary. The increasing reliance on online symptom checkers and self-diagnosis tools presents a challenge: ensuring accuracy, relevance, and efficiency in symptom analysis and disease prediction.\nThis project introduces MediBot, an AI-powered Symptom Checker that leverages advanced Natural Language Processing (NLP), Retrieval-Augmented Generation (RAG), and Multi-Agent AI to provide users with an interactive, intelligent, and context-aware medical assistant.\nMediBot aims to assist users by:\nProviding probable disease predictions based on symptom inputs.\nOffering symptom severity analysis to guide users on urgency.\nExplaining diseases in a simplified manner.\nSuggesting preventive measures and self-care recommendations.\nBy automating preliminary medical consultations, MediBot enhances accessibility, reduces misinformation, and encourages early detection of potential health issues.\nTechnical Problem\nExisting solutions like WebMD\u2019s symptom checker provide text-based inputs to predict potential illnesses. However, these models lack:\n\u2705 Context-aware multi-turn conversations for tracking symptom progression over time.\n\u2705 Reasoning + Action (ReAct)-based intelligent agent selection for accurate medical responses.\n\u2705 A multi-agent approach to separately diagnose diseases, assess symptom severity, provide descriptions, and suggest precautions.\nMediBot is a ReAct-powered AI medical assistant that intelligently selects the right agent based on a user\u2019s query, ensuring dynamic, multi-turn, and accurate responses.\nOur approach involves:\n\ud83d\udd39 Using Retrieval-Augmented Generation (RAG) to fetch relevant medical knowledge.\n\ud83d\udd39 Leveraging LangChain\u2019s ReAct framework to dynamically select specialized agents.\n\ud83d\udd39 Integrating FAISS (Facebook AI Similarity Search) for efficient retrieval of symptom-disease mappings.\n\ud83d\udd39 Maintaining context across multi-turn interactions with memory-based chat history.\nThe ultimate goal is to develop a scalable AI symptom checker that ensures accuracy, usability, and medical relevance.\nObjectives\n\u2705 Develop an AI-based chatbot that allows users to describe symptoms in natural language.\n\u2705 Use multi-agent AI to assign specialized tasks:\nDisease Diagnosis Agent: Predicts probable illnesses.\nSymptom Severity Agent: Assesses the seriousness of symptoms.\nDisease Description Agent: Provides easy-to-understand explanations.\nPrecaution Advisor Agent: Suggests preventive measures.\n\u2705 Implement ReAct-based reasoning to let the AI autonomously select the right agent.\n\u2705 Maintain conversational memory to track symptom progression over multiple interactions.\n\u2705 Use FAISS vector search for efficient retrieval of symptom-disease relationships.\n\u2705 Optimize for real-time, scalable inference, enabling deployment on cloud platforms.\nThis is a baseline strategy, and we encourage further enhancements, such as:\nIncorporating multi-modal analysis (text + images) for dermatological symptom detection.\nBuilding a personalized user history for tracking recurrent health issues.\nAbout the Dataset\nMediBot utilizes multiple structured medical datasets:\n\ud83d\udccc Symptom-Disease Mapping: Matches symptoms to probable conditions.\n\ud83d\udccc Symptom Severity Dataset: Assigns urgency levels to symptoms.\n\ud83d\udccc Medical Knowledge Base: Contains descriptions, causes, and risk factors for diseases.\n\ud83d\udccc Precautionary Measures Dataset: Provides prevention and self-care recommendations.\nBy leveraging these datasets, the AI system ensures accurate and evidence-backed responses.\nProject Milestone",
+    "criteria": [
+      {
+        "name": "LLM Integration & Prompt Engineering",
+        "description": "Seamless integration with OpenAI\u2019s API; well-crafted prompts ensure accurate, contextual, and medically relevant responses. Handles a wide variety of health-related queries effectively."
+      },
+      {
+        "name": "Retrieval & Search Efficiency (FAISS + RAG)",
+        "description": "Efficiently retrieves the most relevant medical data using FAISS/vector search. Accurately maps symptoms to diseases and handles varied query styles (single symptoms, multi-symptom descriptions, severity-based searches)."
+      },
+      {
+        "name": "Multi-Agent System & ReAct-Based Query Handling",
+        "description": "Supports multi-agent collaboration where the AI autonomously selects the correct agent (disease diagnosis, severity assessment, descriptions, or precautions) using ReAct reasoning. Handles multi-turn interactions seamlessly."
+      },
+      {
+        "name": "Conversational Flow & Memory",
+        "description": "Maintains multi-turn context, allowing users to ask follow-up queries naturally. AI remembers previous symptoms and refines responses accordingly."
+      },
+      {
+        "name": "Medical Data Representation & Explanation Clarity",
+        "description": "Displays disease predictions, severity analysis, descriptions, and precautions in a structured, medically accurate, and easy-to-understand format. Uses markdown formatting or a clean UI."
+      },
+      {
+        "name": "Handling of Edge Cases & Error Responses",
+        "description": "Gracefully handles invalid inputs, typos, contradictory symptoms, or ambiguous queries with informative messages instead of failing. Suggests alternative queries where possible."
+      },
+      {
+        "name": "User Interface & Deployment (Gradio/Streamlit + Hugging Face)",
+        "description": "Intuitive, well-designed chatbot interface with smooth interaction. Fast response times, clean layout, and efficient symptom input handling."
+      },
+      {
+        "name": "Code Structure & Documentation",
+        "description": "Clean, modular, and well-documented code with clear function descriptions, comments, and structured notebook sections. Easy to understand and extend."
+      },
+      {
+        "name": "Creativity & Feature Enhancements",
+        "description": "Implements advanced featureslike dynamic agent selection, personalized medical history tracking, multi-modal input (text + images), voice input, or multilingual support. Enhances interactivity beyond simple symptom checks."
+      }
+    ]
+  },
+  {
+    "id": "flagship-fashion-assistant",
+    "category": "capstone-flagship",
+    "title": "Fashion Assistant",
+    "description": "Computer vision fashion assistant for clothing classification, visual similarity search, and style recommendation using CNNs and transfer learning.",
+    "fullContent": "Fashion Assistant\nYour Wardrobe Companion\nBusiness Problem\nMachine Learning and Deep Learning have undeniably revolutionized the technological landscape, offering transformative solutions across diverse industries. In the dynamic realm of fashion, where visual content serves as a cornerstone, the integration of ML and DL holds the promise of redefining the way we explore, discover, and interact with fashion imagery.\nIn the fast-paced landscape of fashion, the increasing volume of visual content poses a challenge for efficient search and retrieval. Recognizing this, this project aims to introduce a solution \u2013 the Deep Learning Based Fashion Image Retrieval system \u2013 designed to redefine the way we navigate and interact with fashion visuals.\nThe current fashion landscape is inundated with an overwhelming array of images, making it challenging for individuals and businesses to efficiently search for specific styles, trends, or products.\nTechnical Problem\nExisting systems, such as Google Lens, offer the ability to photograph an object and employ visual search technology to identify and provide information about that object. In our endeavor, we aspire to create a specialized solution with a focus on clothing. \n\nStyleLens is designed to be a dedicated application where users can snap a picture of one of their wardrobe items, and the system will generate recommendations based on the captured clothing item. Our approach involves utilizing Deep Learning to analyze the intricate patterns within the user-shared image, enabling the identification of the clothing item they wish to find, and suggest similar items. The visual recognition technology aims to streamline the process of discovering similar and complementary wardrobe pieces.\nObjectives\nDevelop an application that allows users to upload a picture of a clothing item from their wardrobe.\nThe application should use Machine/Deep Learning to analyze the patterns in the uploaded image, and return images that are most similar to the input image.\nThis may involve training vision backbone CNN models on DeepFashion Dataset or utilizing their pre-trained counterparts.\nExtract representations from the uploaded images and compare them with others in the database.\nReturn images that are most similar to the one uploaded by the user, potentially employing similarity search and/or clustering algorithms for this purpose.\nThis described approach is just one of many potential strategies to solve the problem. Other avenues for improvement include incorporating descriptive attributes from the DeepFashion dataset as an additional text modality for enhanced search and refining the search based on product classification using the product categories within the DeepFashion Dataset.\nWhile the outlined approaches provide a foundation, it's important to note that there is no one-size-fits-all solution to this complex problem. We encourage a spirit of innovation, inviting you to explore diverse methodologies and think creatively about refining our solution.\nAbout the Dataset\nSize and Scope\nThe Deep Fashion Dataset is a large-scale collection of fashion images.\nIt encompasses over 800,000 images, making it an extensive resource for fashion-related research.\nThe DeepFashion Dataset includes various benchmarks, such as Attribute Prediction, Consumer-to-shop Clothes Retrieval, In-shop Clothes Retrieval, and Landmark Detection.\nOur primary interest lies in the Consumer-to-shop Clothes Retrieval benchmark within the DeepFashion Dataset, which necessitates user-generated images and database image searches. However, access to this dataset is restricted by encryption, requiring individual users to request the password from the authors.\nAs an alternative, we will utilize the In-shop Clothes Retrieval Benchmark, which also focuses on image retrieval. Unlike the Consumer-to-shop benchmark, this dataset assumes that the input images are not user-generated but are inherent to the Clothing Store itself.\nDo note that you are fre",
+    "criteria": [
+      {
+        "name": "EDA and Data Preparation (Weightage: 30)",
+        "description": "Demonstrates a profound understanding of the dataset through comprehensive Exploratory Data Analysis (EDA). Provides in-depth insights into key features and patterns. Data Preparation is meticulous, including thorough cleaning, transformation, and effective structuring of the data. Optimal preproces"
+      },
+      {
+        "name": "Model Training, Hyperparameter Tuning and Evaluation (Weightage: 30)",
+        "description": "The strategy for model training and fine-tuning is well-articulated, demonstrating a clear alignment with the business and technical challenges. A minimum of three Vision Backbone models were experimented with. The application of an extensive hyperparameter optimization methodology, employing tools "
+      },
+      {
+        "name": "Creativity and Innovation (Weightage: 25)",
+        "description": "Extensive Experimentation done to improve image search and retrieval optimization (faster similar image retrieval). Innovative methodologies implemented to improve search results (similarity performance). A clear definition for the choice of an approach exists."
+      },
+      {
+        "name": "Solution Documentation (Weightage: 15)",
+        "description": "The entire implementation is well documented along with steps on how to setup operational tools, and run the inference. The documentation also details a justification for the various choices made throughout the project. The documentation also includes a System Architecture for Model Inference."
+      }
+    ]
+  },
+  {
+    "id": "advanced-binsense-adv",
+    "category": "capstone-advanced",
+    "title": "BinSense AI (Advanced)",
+    "description": "Advanced computer vision for Amazon bin classification with transfer learning, model optimization, and deployment pipeline.",
+    "fullContent": "Motivation\nThe e-commerce industry is growing unprecedentedly, leading to an increased demand for efficient inventory management and order fulfillment processes. One critical aspect of this process is accurately identifying items within bins or baskets, determining their quantities, estimating packaging sizes, and updating inventory availability in real time. Manual identification of items, their size estimation and feeding this information into the inventory management system are time-consuming; leading to suboptimal packaging and inefficient inventory management. The rapid growth of e-commerce demands innovative solutions for optimizing logistics, reducing packaging waste, and enhancing operational efficiency and customer satisfaction. Automating the item and its quantity validation, packaging size estimation and simultaneously updating inventory availability can significantly improve operational efficiency. This project aims to do this automation by leveraging computer vision technology. Students are expected to develop this product with intrinsic features like simple interactive UI with a very well-integrated computer vision model.\nDataset details\nThe Amazon Bin Image Dataset contains over 535K images and metadata from bins of a pod in an operating Amazon Fulfillment Center. The bin images in this dataset are captured as robot units carrying pods as part of normal Amazon Fulfillment Center operations.\nYou can find more details about the dataset here\nYou will have to synthetically generate the images in this project.\nImages\nAbove are some typical images in the dataset S3 bucket \u2018aft-vbi-pds\u2019 and \u2018/bin-images\u2019 prefix.\nA bin contains multiple object categories and various numbers of instances. The size of bins varies depending on the size of the objects in them. The tapes in front of the bins prevent the items from falling out of them; sometimes, this might make the objects unclear. Objects are sometimes heavily occluded by other objects or limited viewpoints of the images.\nThe corresponding metadata for each bin image includes the item identification (Amazon Standard Identification Number, ASIN), quantity, height, length, width, weights.\nUnderstanding the Image and its metadata is crucial before you develop the solution. Some examples can be found here.\nDataset you should use for this project: https://docs.google.com/spreadsheets/d/1rZfFrHEbfX_b-3ofEIDxLQUFNDWtmDarXBrU4nn4Luw/edit#gid=601918728\nThe dataset is a list of images and metadata file names without .jpg and .json extension from the AWS S3 bucket which you should download and use for this project.\nObjectives\nCore objectives of this project:\nUse the dataset (images + metadata) and develop a highly accurate and fast computer vision model to verify if the items with their respective quantities are present in the image of the bin.\nFor example, You get an order for 3 items and their quantities as mentioned below.\nNow, you get an image of the bin where items in the order are present. Your objective is to validate whether the items in the order are the ones in the bin.\nDemonstrate creativity and innovative mindset while working on EDA, data preparation, model selection, application and evaluation, etc.\nDevelop a simple UI using tools/frameworks of your choice for:\nAllowing the user to select an item and its quantity he/she wants to order.\nSelecting the most appropriate image from the dataset which corresponds to order and displaying in the UI.\nUsing the CV model for inferencing and displaying the results of the model to validate if items and its respective quantity in order exists in the bin image.\nCreate a comprehensive presentation and documentation that explains the understanding of objectives, methodology, architecture, decisions, milestones, model selection, hyperparameter tuning and evaluation performed, UI functionality and considerations for MLOps (model deployment, model monitoring and re-training).\n\ufeff\ufeff\ufeff\ufeff\n*Choose cost-effective options to meet the above objectives",
+    "criteria": [
+      {
+        "name": "Understanding of Objective (Weightage: 20)",
+        "description": "Demonstrate a clear and thorough understanding of the objectives and emphasizes on building an highly accurate, efficient and productionized CV based system for detecting if the item with its respective quantity is present in the bin image."
+      },
+      {
+        "name": "Selection and application of CV models (Weightage: 20)",
+        "description": "Performed detailed EDA on image data and research/application of the 3/3+ CV models which are suitable for this problem. Demonstrate a well-designed experimental plan to select and apply various CV models on the data."
+      },
+      {
+        "name": "Evaluation of CV models (Weightage: 20)",
+        "description": "Selects and uses the classification metrics like accuracy, confusion matrix, precision, recall, ROC-AUC, etc. judiciously. Justify the metric choices and ensure that they are insightful and align with the objectives and characteristics of the dataset and expected results. Displays images with their "
+      },
+      {
+        "name": "Innovation and creativity (Weightage: 8)",
+        "description": "Demonstrate highly innovative and unique approaches of EDA, model selection/evaluation. Showcase creativity in integrating existing technologies and proposing an innovative solution, breaking away from traditional methods. Implement thoughtful and highly feasible enhancements, considering the projec"
+      },
+      {
+        "name": "Presentation and Documentation (Weightage: 7)",
+        "description": "Clear and well-organized presentation of the project, including detailed documentation for understanding of objectives, methodology, architecture, decisions, milestones, model selection, hyperparameter tuning and evaluation performed, UI functionalities and considerations for MLOps (model deployment"
+      },
+      {
+        "name": "MLOps (Weightage: 15)",
+        "description": "Developed an efficient and automated deployment process with minimal downtime. The model monitoring is comprehensive and tracks the performance. Logging is done for predictions, errors, and system behavior."
+      },
+      {
+        "name": "UI/UX(Weightage: 10)",
+        "description": "Developed an intuitive, fast and easy to use interface which takes the inputs from user and responds back with analysis/results. Exceptions/errors are taken care of and are easy for the user to understand."
+      }
+    ]
+  },
+  {
+    "id": "advanced-mediwatch",
+    "category": "capstone-advanced",
+    "title": "MediWatch",
+    "description": "Medical monitoring system using ML for patient health tracking, hyperparameter optimization with RayTune, model deployment, monitoring, CI/CD, and orchestration.",
+    "fullContent": "Business Problem\nNavigating the intricate landscape of healthcare, the challenge of patient readmission emerges as a critical concern that demands innovative solutions. Patient readmission, or the return of a patient to the hospital shortly after discharge, not only poses a significant financial burden on healthcare systems but also underscores potential gaps in patient care. High rates of readmission often signal unresolved health issues, insufficient post-discharge support, or inadequate coordination among healthcare providers. This recurrent cycle not only impacts the well-being of patients but also places additional strain on healthcare resources.\nAddressing the problem of patient readmission is not merely about reducing costs; it is fundamentally rooted in a commitment to enhancing the overall quality of patient care, ensuring seamless transitions between hospital and home, and ultimately fostering a healthcare system that prioritizes sustained well-being and optimal recovery.\nTechnical Problem\nWith MediWatch, our aim is to design a predictive model to assess and anticipate the likelihood of patient readmission.\nMediWatch should analyze a myriad of patient-specific factors, such as medical history, demographic information, treatment protocols, post-discharge follow-ups etc. to generate a comprehensive prediction model. The system aims to proactively identify individuals at a higher risk of readmission, allowing healthcare providers to implement targeted interventions and personalized care plans.\nIn the context of a predictive model like MediWatch, MLOps (Machine Learning Operations) is crucial for several reasons.\nMLOps ensures the seamless integration of machine learning models into the healthcare workflow. By establishing robust deployment pipelines and monitoring mechanisms, MLOps facilitates the efficient transition of predictive models from development to production, enabling healthcare professionals to leverage these models in real-world scenarios.\nAdditionally, MLOps contributes to model performance monitoring and management. In the dynamic healthcare environment, patient conditions and treatment protocols evolve. MLOps enables continuous monitoring of model performance, allowing for timely updates and refinements to ensure the predictive accuracy of the model aligns with the evolving healthcare landscape.\n\ufeff\ufeff\ufeff\ufeff\ufeff\nTherefore, this challenge is designed to evaluate your proficiency in the complete Machine Learning (ML) lifecycle, extending beyond conventional model development. In addition to assessing your modeling skills, this problem aims to gauge your understanding and application of MLOps practices throughout the ML workflow.\nThis holistic evaluation seeks to measure your competency in handling the end-to-end ML process, incorporating MLOps principles to guarantee the model's reliability, scalability, security, and compliance with ethical standards.\nObjectives\nExamine data and conduct feature engineering on datasets related to patient readmission.\nDevelop and train machine/deep learning models for forecasting patient readmission.\nOrchestrate model training and optimize hyperparameters using an orchestration system like Airflow. Execute parallel, large-scale experiments with an HPO tool such as RayTune.\nEstablish and log all experiments in MLflow for comprehensive tracking.\nRetrieve the best-performing model and deploy it as a RESTful API endpoint.\nAutomate packaging, and deployment processes using CI/CD tools like Jenkins or orchestration tools such as Airflow.\nImplement a model monitoring system using tools like Evidently to detect potential drift.\nDevelop orchestration pipelines to retrain and deploy models based on drift detection.\nPlease note that the mentioned tools are provided for reference based on the curriculum. Feel free to explore alternative tools that align with the project's goals.\nThe dataset can be downloaded from https://www.kaggle.com/datasets/brandao/diabetes. Use the data as per your convenien",
+    "criteria": [
+      {
+        "name": "EDA and Data Preparation (Weightage: 5%)",
+        "description": "Demonstrate an understanding of the dataset through thorough Exploratory Data Analysis (EDA). Offer insights into key features and patterns. Perform Data Preparation, including thorough cleaning, transformation, and effective data structuring. Implement optimal preprocessing and feature engineering"
+      },
+      {
+        "name": "Large Scale Hyperparameter Optimization and Experiment Tracking (Weightage: 15%)",
+        "description": "Conduct large-scale hyperparameter tuning efficiently utilizing RayTune or an equivalent tool. Implement comprehensive experiment tracking, maintaining detailed records of hyperparameters, metrics, configurations, models, and data transformation artifacts in MLflow or a similar tool."
+      },
+      {
+        "name": "Model Packaging and Deployment (Weightage: 15%)",
+        "description": "Develop robust inference APIs with a focus on seamless integration and standardized model deployment. Provide API documentation accessible through Swagger or an equivalent tool. Ensure consistency in data transformers between the Inference API and the ones used during training. Package models as Doc"
+      },
+      {
+        "name": "Model Monitoring (Weightage: 15%)",
+        "description": "Create a comprehensive monitoring dashboard to track the model's performance in production. Implement monitoring for data and model drift using Evidently or an equivalent tool. Conduct data drift detection on a diverse set of columns using various drift detection measures like PSI, KS Test, etc."
+      },
+      {
+        "name": "Continuous Integration and Deployment (Weightage: 15%)",
+        "description": "Automate the Model/API Build and Deployment process using Jenkins or an equivalent tool. Configure Build and Deployment Jobs to reference the inference code located on a GitHub repository or a local server for Docker image generation, followed by deployment on Kubernetes. Enable remote triggering of"
+      },
+      {
+        "name": "Orchestration (Weightage: 20%)",
+        "description": "Implement the orchestration of Data Preparation, Hyperparameter Optimization, Model Packaging, and Model Deployment processes using Airflow or an equivalent tool. Establish remote integration with build tools like Jenkins or equivalent. Design the orchestration pipeline to periodically assess if a D"
+      },
+      {
+        "name": "Solution Documentation (Weightage: 15%)",
+        "description": "Thoroughly document the entire implementation, providing clear instructions on setting up operational tools and rerunning the entire pipeline or individual tasks. Ensure the documentation includes a comprehensive system architecture of the orchestration pipeline, elucidating the functionality of eac"
+      }
+    ]
+  },
+  {
+    "id": "advanced-blue-horizon-adv",
+    "category": "capstone-advanced",
+    "title": "Blue Horizon AI (Advanced)",
+    "description": "Advanced AI concierge for travel with deep personalization, multi-modal search, and production-grade deployment.",
+    "fullContent": "Blue Horizon AI Concierge\nDevelop a conversational AI assistant for Blue Horizon to enhance customer service through automated bookings, personalized recommendations, and efficient handling of inquiries.\nProject Summary\nThis repository houses the code for an AI-powered concierge designed to enhance customer service at Blue Horizon Luxury Hotel. The system leverages a multi-agent architecture to handle various tasks, including:\nRoom and Restaurant Bookings: Automate reservations with personalized options.\nService Appointments: Schedule spa treatments, in-room dining, and other services.\nLocal Recommendations: Provide personalized recommendations for nearby attractions, restaurants, and activities.\nFAQ Handling: Answer common guest inquiries about hotel policies, amenities, and services.\nThe project utilizes a combination of:\nLarge Language Models (LLMs): For natural language understanding, response generation, and decision-making.\nVector Databases: To store and retrieve relevant hotel information efficiently.\nPostgreSQL Database: For storing and managing hotel operational data.\nSpeech-to-Text (STT) and Text-to-Speech (TTS): To enable seamless voice interactions with the AI concierge.\nStreamlit: To create a user-friendly interface.\nThis project aims to improve customer satisfaction, reduce wait times, and enhance the overall guest experience at Blue Horizon.\nKey Features\nMulti-agent architecture for handling diverse customer requests.\nPersonalized recommendations based on guest preferences and interests.\nSeamless voice interaction for a natural and intuitive user experience.\nIntegration with hotel systems for real-time booking and service updates.\nVector-based knowledge retrieval for efficient FAQ and recommendation handling.\nComprehensive data model for managing hotel operations.\nPrerequisites\nPython 3.12+\nPostgreSQL 14+\nPoetry for dependency management\nInstallation\nCreate and activate virtual environment:\npython3 -m venv .venv\nsource .venv/bin/activate\nInstall dependencies:\npoetry lock\npoetry install\nSet up environment variables:\n# Create .env file with the following variables\nDB_USER=postgres\nDB_PASSWORD=postgres\nDB_HOST=localhost\nDB_PORT=5432\nDB_NAME=blue_horizon\nDatabase Setup\nInstall PostgreSQL and create database:\ncreatedb blue_horizon\ncreatedb blue_horizon_test\nRun database migrations:\npython -m blue_horizon.migrations.create_database\nLoad initial data:\npython -m blue_horizon.migrations.data_loader\nCreate knowledge base indices:\npython -m blue_horizon.migrations.create_knowledge_base_indices\nData Model\nThe system uses a comprehensive data model to manage hotel operations:\nCustomers: Guest information and preferences\nRooms: Room details, availability, and pricing\nBookings: Room, restaurant, and event bookings\nServices: Hotel services and appointments\nStaff: Staff information and schedules\nEvents: Event spaces and bookings\nKnowledge Bases: FAQs and local recommendations\nTesting\nRun all tests:\npytest\nRun specific test categories:\n# Database tests\npytest blue_horizon/tests/test_database.py\n# Data loader tests\npytest blue_horizon/tests/test_data_loader.py\n# Migration tests\npytest blue_horizon/tests/test_migration.py\nTest coverage includes:\nDatabase operations and queries\nData loading and validation\nDatabase migrations\nKnowledge base operations\nNatural language processing\nVector search functionality\nDevelopment\nProject Structure\nblue_horizon/\n\u251c\u2500\u2500 database/        # Database operations and models\n\u251c\u2500\u2500 migrations/      # Database migrations and data loading\n\u251c\u2500\u2500 search/          # Vector search and knowledge base\n\u251c\u2500\u2500 tests/           # Test suite\n\u2514\u2500\u2500 utils/           # Utility functions\nAdding New Features\nCreate new models in blue_horizon/migrations/models.py\nUpdate database operations in blue_horizon/database/database.py\nAdd corresponding tests in blue_horizon/tests/\nUpdate data loaders if needed in blue_horizon/migrations/data_loader.py\nContributing\nFork the repository\nCreate a feature branch\nMake your changes\nAdd tests for new",
+    "criteria": [
+      {
+        "name": "Code Readability & Organization",
+        "description": "10.0"
+      },
+      {
+        "name": "Code Reusability & Modularity",
+        "description": "10.0"
+      },
+      {
+        "name": "Error Handling & Debugging",
+        "description": ""
+      },
+      {
+        "name": "Database Connection Handling",
+        "description": "10.0"
+      },
+      {
+        "name": "SQL Query Efficiency",
+        "description": "10.0"
+      },
+      {
+        "name": "AI Query Processing",
+        "description": ""
+      },
+      {
+        "name": "Agent Building & Integration",
+        "description": "10.0"
+      },
+      {
+        "name": "Multi-Agent System",
+        "description": "10.0"
+      },
+      {
+        "name": "Session & Query Memory",
+        "description": "10.0"
+      },
+      {
+        "name": "Accuracy & Trustworthiness",
+        "description": "10.0"
+      },
+      {
+        "name": "Deployment & Scalability",
+        "description": "10.0"
+      },
+      {
+        "name": "UI & Usability",
+        "description": "10.0"
+      },
+      {
+        "name": "Unique Enhancements / Additional Features (Bonus 10 pts)",
+        "description": "10*"
+      }
+    ]
+  },
+  {
+    "id": "advanced-cybershield-adv",
+    "category": "capstone-advanced",
+    "title": "CyberShield AI (Advanced)",
+    "description": "Advanced cybersecurity AI with PII protection, agent-based threat detection, LLM integration, and production deployment.",
+    "fullContent": "Cyber Shield AI\nA Cybersecurity Conversational Agent\nIntroduction\nIn today\u2019s digital landscape, organizations face growing cybersecurity challenges while handling sensitive data such as Personally Identifiable Information (PII). The increasing reliance on APIs, AI-driven systems, and conversational agents raises concerns about data security, threat detection, and privacy compliance.\nTraditional security solutions often lack context-aware PII protection and multimodal capabilities, making it difficult to safeguard AI-driven interactions. A lack of robust security measures exposes organizations to risks such as data breaches, identity theft, and financial losses.\nBusiness Problem & the Impact\nChallenges in Cybersecurity & AI-Driven PII Protection\nPII Vulnerability: Many organizations are integrating AI-driven conversational agents and automation tools, but these models lack robust mechanisms to detect and protect PII effectively. Current models may inadvertently expose sensitive data (e.g., financial details, health records, or personal identifiers).\nIntegration Challenges with Security APIs: Real-time cybersecurity threat detection relies on external security APIs like Shodan, VirusTotal, and AbuseIPDB, but existing AI systems struggle with seamless integration, limiting their ability to proactively detect and mitigate threats.\nSecurity Risks in LLM-Powered Agents: AI agents must understand user intent while ensuring security, but they often lack the ability to prevent data leaks, unauthorized access, and adversarial exploitation.\nMultimodal Complexity: AI systems increasingly process both text and image-based user inputs, but ensuring security and preventing information leaks across multiple data formats remains a challenge.\nScalability & Enterprise Security Compliance: Deploying AI solutions at scale in large enterprises requires stringent security compliance, real-time monitoring, and logging capabilities, but many current implementations lack standardized security frameworks and auditing mechanisms.\nKey Business Goals\nEnhance cybersecurity by integrating threat intelligence APIs for real-time risk detection.\nBuild a privacy-preserving AI agent that detects, masks, and protects PII during interactions.\nDevelop a scalable, interactive system that supports both text and image-based queries while maintaining high-security standards.\nList of Companies leveraging Generative AI for cybersecurity:\nPreamble \u2013 Provides AI safety tools to detect and mitigate prompt injection attacks in LLM deployments.\nDeep Instinct \u2013 Uses deep learning to prevent malware, zero-day attacks, and advanced cybersecurity threats.\nAporia \u2013 Developed AI \"Guardrails\" to enhance chatbot security, privacy controls, and prevent data leaks.\nSocket \u2013 AI-powered threat detection for open-source code, preventing supply chain attacks.\nCounterCraft \u2013 Uses AI-driven deception technology to detect and analyze cyber threats proactively.\nWho Can Benefit from CyberShield AI?\nKey Problem Statement\nDevelop a secure, AI-powered cybersecurity assistant that integrates threat intelligence APIs, detects and protects PII in conversations, and supports multimodal interactions. The system should ensure real-time security, scalable deployment, and compliance with privacy standards.\nCore Objectives\nPII Detection & Masking \u2013 Implement regex-based and NLP-driven PII detection using SpaCy.\nSecurity API Integrations \u2013 Integrate Shodan, VirusTotal, and AbuseIPDB to enhance cybersecurity awareness.\nLLM Integration & Context Management \u2013 Use OpenAI\u2019s API & ReAct techniques for secure AI-driven interactions.\nMultimodal Capability \u2013 Support both text and image-based threat analysis for a robust security assistant.\nSecure Architecture & Deployment \u2013 Implement backend security, authentication, and performance optimizations.\nInteractive UI & Visualization \u2013 Develop a Flask/FastAPI-based system with a user-friendly Streamlit/Gradio frontend.\nKey Learning Outcomes\nProject Plan & Milestones:\nWeek ",
+    "criteria": [
+      {
+        "name": "Development Fundamentals & API Integration (10%)",
+        "description": "All API integrations are properly implemented with robust error handling. Security best practices are followed throughout. Authentication is properly managed and secured. All basic functions (Shodan, VirusTotal, AbuseIPDB) work flawlessly."
+      },
+      {
+        "name": "PII Protection & Processing (30%)",
+        "description": "Advanced PII detection using both regex and NLP approaches. Comprehensive masking system with perfect accuracy. Handles all common PII types correctly. SpaCy integration is optimal with custom entity recognition."
+      },
+      {
+        "name": "Agent Implementation & LLM Integration (35%)",
+        "description": "Perfect implementation of ReACT architecture. Seamless OpenAI API integration. Excellent context management. Robust error handling. Agent shows intelligent decision-making capabilities. Image to text support"
+      },
+      {
+        "name": "Web Application & Deployment (20%)",
+        "description": "Professional-grade web interface with excellent UX. Robust security features including proper authentication. Perfect API integration. Comprehensive logging. Successfully deployed with Docker support."
+      },
+      {
+        "name": "Documentation & Code Quality (5%)",
+        "description": "Comprehensive documentation including API references, setup guides, and architecture diagrams. Clean, well-commented code following PEP 8. Excellent test coverage. Detailed logging implementation."
+      }
+    ]
+  },
+  {
+    "id": "advanced-healthsense-adv",
+    "category": "capstone-advanced",
+    "title": "HealthSense AI (Advanced)",
+    "description": "Advanced health AI with predictive modeling, multi-modal data integration, personalized insights, and production deployment.",
+    "fullContent": "Healthsense AI\nAI-Driven Multi-Agent Healthcare System\nIntroduction & Motivation\nThe integration of Generative AI (GenAI) and Large Language Models (LLMs) has significantly transformed the healthcare sector by enabling advanced natural language processing, improving access to medical information, and streamlining patient interactions. AI-powered solutions can assist in diagnosing conditions, providing health recommendations, and offering 24/7 support to patients.\nDespite the abundance of medical knowledge, accessing personalized and reliable health information remains a challenge. Many existing healthcare systems provide generic responses and lack contextual awareness. HealthSense AI is designed to bridge this gap by leveraging LLMs and the LangChain framework to offer intelligent, context-aware health information assistance.\nBusiness Problem Overview and Potential Impact\nChallenges in Healthcare Information Systems\nLimited Personalization \u2013 Most healthcare information systems provide one-size-fits-all responses that lack user-specific relevance.\nLack of Context Awareness \u2013 Many AI assistants struggle to maintain conversation history and context over multiple interactions.\nFragmented Information Sources \u2013 Medical knowledge is scattered across multiple databases, making it difficult to consolidate accurate information efficiently.\nWho Can Benefit from HealthSense AI?\nPotential Impact\nStartups such as Babylon Health, Ada Health, and Buoy Health are already leveraging AI to enhance healthcare delivery. HealthSense AI aims to build upon this trend by providing context-aware, real-time, and interactive healthcare assistance, improving patient outcomes and reducing the burden on healthcare professionals.\nKey Problem Statement\n\u201cDevelop an intelligent healthcare platform that streamlines medical service discovery and booking by analyzing hospital data, reviews, and healthcare metrics.\nThe system will extract and compare key parameters to help users make informed healthcare decisions.\nThe solution will feature a comprehensive comparison engine for hospitals and diagnostic centers, an automated slot booking system, and detailed information about medical tests and procedures. The platform will incorporate a user-friendly chat interface to hospital comparisons, explore healthcare metrics, and facilitate seamless appointment scheduling.\u201d\nCore Objectives\nImplement Natural Language Processing (NLP) \u2013 Accurately interpret and process medical terminology.\nDevelop Context-Aware Responses \u2013 Maintain dialogue history for better interaction continuity.\nEnable Multi-Source Integration \u2013 Pull data from reliable medical knowledge bases.\nProvide Real-Time Doctor and Hospital Recommendations \u2013 Offer users relevant medical support.\nEnsure Compliance and Ethical AI Usage \u2013 Maintain HIPAA and GDPR compliance.\nSystem Features\nHere's a structured breakdown of system features for HealthSense:\nData Processing & Analysis:\nLoad and process healthcare provider data, including hospitals, and\ndiagnostic info\nImplement loading data from csv into mySQL\nHealthcare Provider Comparison & Recommendation:\nGenerate comprehensive comparison metrics across healthcare facilities\nDevelop personalized recommendation system based on user preferences and requirements\nAppointment Management System:\nReal-time slot availability tracking\nDiagnostic Services Information:\nMaintain comprehensive test catalog with detailed descriptions\nProvide preparation guidelines for various tests\nInteractive UI & Dashboards:\nDevelop user-friendly interface for healthcare service exploration\nKey Learning Outcomes\nThis project equips learners with high-demand AI and healthcare tech skills, including:\nLarge Language Model Integration: Master integration of LLMs using LangChain for intelligent healthcare service recommendations and natural language processing of medical queries.\nHealthcare Data Engineering: Develop expertise in handling medical data,including synthetic data generation, database schema d",
+    "criteria": [
+      {
+        "name": "Code Readability & Organization",
+        "description": "10.0"
+      },
+      {
+        "name": "Code Reusability & Modularity",
+        "description": "10.0"
+      },
+      {
+        "name": "Error Handling & Debugging",
+        "description": ""
+      },
+      {
+        "name": "Database Connection Handling",
+        "description": "10.0"
+      },
+      {
+        "name": "SQL Query Efficiency",
+        "description": "10.0"
+      },
+      {
+        "name": "AI Query Processing",
+        "description": ""
+      },
+      {
+        "name": "Agent Building & Integration",
+        "description": "10.0"
+      },
+      {
+        "name": "Multi-Agent System",
+        "description": "10.0"
+      },
+      {
+        "name": "Session & Query Memory",
+        "description": "10.0"
+      },
+      {
+        "name": "Accuracy & Trustworthiness",
+        "description": "10.0"
+      },
+      {
+        "name": "Deployment & Scalability",
+        "description": "10.0"
+      },
+      {
+        "name": "UI & Usability",
+        "description": "5.0"
+      },
+      {
+        "name": "Unique Enhancements / Additional Features (Bonus 10 pts)",
+        "description": "5*"
+      }
+    ]
+  },
+  {
+    "id": "advanced-trendsetter-adv",
+    "category": "capstone-advanced",
+    "title": "TrendSetter AI (Advanced)",
+    "description": "Advanced trend analysis with graph neural networks, social influence modeling, and production-grade predictive analytics.",
+    "fullContent": "Trend Setter AI\nUnveiling Key Players in Social Network\nProblem Statement\nDevelop an AI system to identify key influencers in social networks by analyzing user interactions and structural relationships using graph-based data. The system will extract local structural features from nodes, such as connectivity patterns and neighborhood properties, and apply clustering techniques to uncover users with high influence potential. These insights will be used to identify similar nodes, ensuring continuity if a replacement influencer is needed.\nThe solution will include an intuitive user interface to visualize the network, explore influencer metrics, and generate actionable insights for targeted marketing, partnerships, or content dissemination. It will prioritize scalability and usability to handle real-world, large-scale social networks effectively.\nTools\nNetworkX, iGraph, Python, Clustering Algorithms (e.g., K-Means, DBSCAN), Visualization Libraries (e.g., Matplotlib, Plotly), UI/UX frameworks such as Gradio, Streamlit, or Dash for interactive front-end development.\nAI-Powered Influencer Discovery in Social Networks\nDesign and implement a robust end-to-end system to identify key influencers in social networks using graph-based machine learning techniques. This system will analyze user interactions and structural relationships, extract node-level insights, rank influential nodes, and provide recommendations for replacements when required. By combining cutting-edge graph processing, clustering algorithms, and visualization tools, the project will deliver actionable insights to optimize influencer engagement strategies.\nSystem Features:\n1. Graph Analysis & Feature Extraction:\n\u25cb Load and process real-world social graph data.\n\u25cb Extract local node features (e.g., neighborhood connectivity and structural properties) for influence assessment.\n2. Influencer Identification & Ranking:\n\u25cb Identify and rank nodes with high influence potential based on graph-derived features.\n\u25cb Generate replacement suggestions for influencers with similar network properties.\n3. Clustering & Insights:\n\u25cb Group influencers with similar characteristics using clustering algorithms. \u25cb Summarize network trends to aid in influencer segmentation and strategic planning.\n4. Interactive UI & Visualization:\n\u25cb Develop an intuitive interface for graph exploration and influence analysis. \u25cb Provide visualizations of influencer rankings, clusters, and relationships. 5. Scalability & Deployment:\n\u25cb Ensure scalability to handle large real-world datasets.\n\u25cb Deploy the solution as a lightweight, cloud-ready application.\nReal-World Applications:\n1. Marketing & Advertising: Identify top influencers for targeted campaigns and discover backups for continuity.\n2. Product Launches: Leverage influencer insights to design niche-specific outreach strategies.\n3. Content Creation: Analyze network relationships to suggest collaboration opportunities. 4. Social Network Analysis: Uncover patterns in user behavior for social media platforms or research applications.\nMachine Learning Techniques:\n\u25cf Graph-based feature extraction and neighborhood analysis.\n\u25cf Clustering algorithms (K-Means, DBSCAN, hierarchical clustering).\n\u25cf Node ranking methods for influence scoring.\n\u25cf Visualization-driven data analysis for graph insights.\nTech Stack:\n\u25cf Graph Libraries: NetworkX, iGraph.\n\u25cf Clustering & ML: Scikit-learn, PyCaret.\n\u25cf Visualization Tools: Plotly, Cytoscape.js, NetworkX for interactive graph exploration. \u25cf UI Development: Gradio, Streamlit, Dash for seamless, user-friendly interfaces.\n\u25cf Deployment: Docker for containerization; AWS/GCP/Azure for cloud deployment.\nKey Learning Outcomes:\n1. Hands-On Graph ML: Gain expertise in graph-based machine learning for analyzing social networks and deriving actionable insights.\n2. Advanced Feature Engineering: Master graph feature extraction, focusing on neighborhood metrics and local structural properties.\n3. End-to-End System Building: Learn how to design, implement, an",
+    "criteria": [
+      {
+        "name": "Milestone 1:  Problem Statement & Project Initialization",
+        "description": "Clarity and Scope Definition"
+      },
+      {
+        "name": "Milestone 2:  EDA & Graph-Based Feature Engineering",
+        "description": "EDA Quality"
+      },
+      {
+        "name": "Milestone 3:  Model Building & Hyperparameter Tuning",
+        "description": "Model Implementation"
+      },
+      {
+        "name": "Milestone 4:  Observations & Influencer Extraction",
+        "description": "Insights from Clusters"
+      },
+      {
+        "name": "Milestone 5:  Streamlit App Development (UI/UX)",
+        "description": "App Functionality"
+      },
+      {
+        "name": "Milestone 6: Documentation",
+        "description": "Completeness"
+      }
+    ]
+  },
+  {
+    "id": "advanced-resume-coach",
+    "category": "capstone-advanced",
+    "title": "Resume Coach",
+    "description": "AI resume analysis and coaching system with LLM-based feedback, PDF extraction, prompt engineering, and web application deployment.",
+    "fullContent": "Motivation\nThe job market is experiencing unprecedented changes, demanding innovative and efficient solutions in career development and job application processes. A crucial aspect of this evolution is the need for precise and tailored job applications, especially in aligning an individual's resume with specific job descriptions. Traditional methods of resume building and job matching are often time-consuming and may not effectively capture the nuances of an individual's experience or the specific requirements of a job posting. This leads to a suboptimal presentation of candidates' skills and experiences, potentially affecting their job application success rates.\n\ufeff\ufeff\nThe surge in online job applications and digital recruitment processes necessitates a shift towards more agile, accurate, and personalised methods of resume preparation and job matching. Automated, AI-driven solutions can play a pivotal role in optimising these processes, reducing the time and effort involved in manually tailoring applications for each job. This project aims to address these challenges by harnessing the capabilities of Large Language Models (LLMs) and AI technologies.\nLearners in this project are expected to develop a tool that not only simplifies the resume tailoring process but also enhances the quality and relevance of job applications. Key features of this product include a user-friendly interactive interface, efficient processing of user data, and a robust AI model that intelligently matches resumes with job descriptions. The ultimate goal is to enhance operational efficiency in job applications, reduce the time taken to apply for suitable positions, and increase the chances of job application success, thereby improving overall user satisfaction in the job-hunting process.\nBy automating the process of resume customization and job matching, the project aims to set a new standard in job application efficiency and effectiveness, reflecting the needs and dynamics of the modern job market.\nObjectives\nBuild a system that can compare an individual\u2019s resume to a job posting and assess whether the position is a good fit for the individual, identify potential gaps between the individual\u2019s background and the position\u2019s requirements, and identify unique strengths that the individual should emphasise if applying to the position. Develop and implement additional forms of coaching advice.\nImplement the system as a web application that takes the user\u2019s resume and a job description as input, and provides a coaching report as output.\nThe system implemented should generate a coaching report as well as have the ability to chat with the user and answer his/her queries i.e. act as a coach for them.\nDemonstrate an ability to build an application backed by a Generative AI model and frameworks such as LangChain.",
+    "criteria": [
+      {
+        "name": "Resume Coach: Evaluation Criteria",
+        "description": "EDA and Data Preparation (Weightage: 5%)"
+      },
+      {
+        "name": "Model and Hyperparameter Fine Tuning (Weightage: 5%)",
+        "description": "Efficiently undertake hyperparameter tuning for the LLM, documenting the experimental rationale behind the selection of hyperparameters. Provide code for fine-tuning the model, ensuring the dataset is prepped in a format suitable for ingestion, demonstrating a well-thought-out approach."
+      },
+      {
+        "name": "Model Deployment (Weightage: 25%)",
+        "description": "Exhibit excellence in deploying the LLM, with a focus on seamless integration and standardised deployment practices. Utilise AWS SageMaker, either through Jumpstart or DLC, balancing cost and performance effectively. The application should be containerized with Docker and deployed on EC2, showcasing"
+      },
+      {
+        "name": "Web Application (Weightage: 25%)",
+        "description": "Deliver an exemplary web application with a user-friendly design that is intuitive and visually engaging. Ensure flawless functionality across all features, with exceptional performance devoid of any disruptions. Embed additional functionalities such as parameter tuning capabilities, job searching,"
+      },
+      {
+        "name": "Creativity and Innovation (Weightage: 10%)",
+        "description": "Innovate by incorporating PDF data extraction and novel methodologies for summarising lengthy documents, ensuring the chat maintains context despite the LLM's context length constraints. Your approach should creatively solve problems while introducing new features or capabilities not found in existi"
+      },
+      {
+        "name": "Prompt Engineering (Weightage: 25%)",
+        "description": "Showcase a sophisticated understanding of prompt engineering, crafting prompts that are concise, clear, and contextually relevant, guiding the LLM to generate desired outputs effectively. Engage in innovative prompt design and a rigorous iterative refinement process, underpinned by a deep analysis o"
+      },
+      {
+        "name": "Solution Documentation (Weightage: 5%)",
+        "description": "Provide detailed and comprehensive documentation of the entire implementation process, including deployment instructions for the LLM and the application, and a thorough explanation of the system architecture. The documentation should be clear and well-organised, enabling easy comprehension and repli"
+      }
+    ]
+  },
+  {
+    "id": "advanced-shoptalk",
+    "category": "capstone-advanced",
+    "title": "ShopTalk",
+    "description": "Conversational commerce AI for personalized shopping with NLP, recommendation engine, web deployment, and prompt engineering.",
+    "fullContent": "Motivation\nNatural language interfaces are disrupting a lot of domains and providing more intuitive interaction of users with products and services in a conversational style. The shopping experience is going through a similar paradigm shift, where simple keywords based search is no longer an accepted norm, given it has severe limitations in terms of understanding the semantics of the knowledge base, as well as the user query. For example, it is very difficult to implement a keyword based search for queries like : \u201cShow me a red shirt for men under 50 Dollars\u201d. To provide such intelligent search, we can leverage modern-day Large language models to build a Shopping Assistant for our users, leading to improved product discoverability, better search alignment to user preference, as well as improved overall NPS and business.\nProblem Statement\nWe are supposed to build a smart assistant that, given a user query, can find the most relevant products from text and provide a natural language-based response.\nThe system's development focuses on multiple key aspects. First, it aims to achieve a sophisticated level of User Input Understanding, allowing the system to comprehend user inputs in natural language comprehensively, encompassing complex queries, synonyms, and variations. Additionally, the integration of the Retrieval Augmented Generation (RAG) model is essential to facilitate the efficient retrieval of relevant products based on user queries, ensuring both accuracy and speed in matching products to the query. Moreover, the incorporation of Natural Language Generation (NLG) capabilities is crucial to transforming identified products into coherent and human-like recommendations expressed in natural language.\n\ufeff\ufeffUser Experience Optimization is another priority, emphasising the delivery of clear, concise, and contextually relevant recommendations, thereby minimising ambiguity and enhancing overall satisfaction. Finally, Real-Time Responsiveness is a critical element, ensuring that the system responds promptly to user queries, creating a dynamic and interactive shopping assistant experience.",
+    "criteria": [
+      {
+        "name": "EDA and Data Preparation (Weightage: 15%)",
+        "description": "Demonstrates a profound understanding of the dataset through comprehensive Exploratory Data Analysis (EDA). Provides in-depth insights into key features and patterns. Language preprocessing is done, NLP preprocessing knowledge displayed. Data Preparation is meticulous, including thorough cleaning, t"
+      },
+      {
+        "name": "Experimentation with Models (Weightage: 25%)",
+        "description": "In-depth fine-tuning of language model with clear explanation of modifications."
+      },
+      {
+        "name": "Deployment (Weightage: 25%)",
+        "description": "Demonstrates excellence by creating robust inference APIs, prioritising seamless integration and standardised model deployment. All the requirements are documented. Model is just loaded once during service up, not during inference. The Inference API uses the same data transformers as the ones used d"
+      },
+      {
+        "name": "E2E testing (Weightage: 15%)",
+        "description": "E2E testing done on a variety of test cases for Correctness and Latency measurement.  Results Documented."
+      },
+      {
+        "name": "UI/ UX (Weightage: 5%)",
+        "description": "Working UI with conversational history supported. Output and input properly rendered."
+      },
+      {
+        "name": "Solution Documentation (Weightage: 15%)",
+        "description": "The entire implementation is well documented along with steps on how to set up operational tools, and rerun the entire pipeline or individual tasks. The system architecture of the pipeline is comprehensive, detailing what each step does.  All libraries/ environments/ System configurations used shoul"
+      }
+    ]
+  },
+  {
+    "id": "advanced-stylens",
+    "category": "capstone-advanced",
+    "title": "Stylens",
+    "description": "AI fashion analysis using computer vision for style detection, trend identification, outfit recommendations, and web application.",
+    "fullContent": "Business Problem\nMachine Learning and Deep Learning have undeniably revolutionized the technological landscape, offering transformative solutions across diverse industries. In the dynamic realm of fashion, where visual content serves as a cornerstone, the integration of ML and DL holds the promise of redefining the way we explore, discover, and interact with fashion imagery.\nIn the fast-paced landscape of fashion, the increasing volume of visual content poses a challenge for efficient search and retrieval. Recognizing this, this project aims to introduce a solution \u2013 the Deep Learning Based Fashion Image Retrieval system \u2013 designed to redefine the way we navigate and interact with fashion visuals.\nThe current fashion landscape is inundated with an overwhelming array of images, making it challenging for individuals and businesses to efficiently search for specific styles, trends, or products.\nTechnical Problem\nExisting systems, such as Google Lens, offer the ability to photograph an object and employ visual search technology to identify and provide information about that object. In our endeavor, we aspire to create a specialized solution with a focus on clothing.\nStyleLens is designed to be a dedicated application where users can snap a picture of one of their wardrobe items, and the system will generate recommendations based on the captured clothing item. Our approach involves utilizing Deep Learning to analyze the intricate patterns within the user-shared image, enabling the identification of the clothing item they wish to find, and suggest similar items. The visual recognition technology aims to streamline the process of discovering similar and complementary wardrobe pieces.\nObjectives\nDevelop an application that allows users to upload a picture of a clothing item from their wardrobe.\nThe application should use Machine/Deep Learning to analyze the patterns in the uploaded image, and return images that are most similar to the input image.\nThis may involve training vision backbone models like VGGNet, ResNet on DeepFashion Dataset or utilizing their pre-trained counterparts.\nExtract representations from the uploaded images and compare them with others in the database.\nReturn images that are most similar to the one uploaded by the user, potentially employing clustering algorithms for this purpose.\nThis described approach is just one of many potential strategies to solve the problem. Other avenues for improvement include incorporating descriptive attributes from the DeepFashion dataset as an additional text modality for enhanced search and refining the search based on product classification using the product categories within the DeepFashion Dataset.\nWhile the outlined approaches provide a foundation, it's important to note that there is no one-size-fits-all solution to this complex problem. We encourage a spirit of innovation, inviting you to explore diverse methodologies and think creatively about refining our solution.",
+    "criteria": [
+      {
+        "name": "EDA and Data Preparation (Weightage: 20%)",
+        "description": "Demonstrate an understanding of the dataset through Exploratory Data Analysis (EDA). Provide insights into key features and patterns. Ensure meticulous Data Preparation, including thorough cleaning, transformation, and effective structuring of the data. Employ optimal preprocessing and feature engin"
+      },
+      {
+        "name": "Model Training, Hyperparameter Tuning and Evaluation (Weightage: 20%)",
+        "description": "Articulate a well-defined strategy for model training and fine-tuning that aligns clearly with both business and technical challenges. Experiment with several Image Retrieval modeling techniques. Perform distributed hyperparameter tuning if required. Systematically track experiments using a dedicate"
+      },
+      {
+        "name": "Web Application and Project Packaging (Weightage: 20%)",
+        "description": "Create a user-friendly design for the application, ensuring it offers an intuitive interface. Ensure all features and functionalities operate seamlessly, and the application performs well without any issues. Package up the models and Web App in a Docker Image and ensure a Dockerfile is available for"
+      },
+      {
+        "name": "Creativity and Innovation (Weightage: 25%)",
+        "description": "Conduct extensive experimentation aimed at enhancing image search and retrieval optimization, specifically focusing on achieving faster retrieval of similar images. Implement innovative methodologies to improve the performance of similarity search results. Provide a clear and well-defined rationale"
+      },
+      {
+        "name": "Solution Documentation (Weightage: 15%)",
+        "description": "Ensure comprehensive documentation of the implementation, providing step-by-step guidance on setting up operational tools and running the inference process. Justify the choices made throughout the project in the documentation to enhance transparency in decision-making. Additionally, include a detail"
+      }
+    ]
+  },
+  {
+    "id": "advanced-visionassist",
+    "category": "capstone-advanced",
+    "title": "VisionAssist",
+    "description": "AI visual assistance for accessibility using object detection, scene description, OCR, and real-time visual understanding.",
+    "fullContent": "Motivation\nVoice-based Virtual Assistants (VAs) are designed to understand simple commands (audio inputs by the user) and respond accordingly. Most VAs serve as a replacement for human-human interaction in various domains (e.g., chatbots). Nowadays, several companies have started making personal VAs customized for specific human needs. A smart-home VA can perform various functions like turning on/off appliances such as TVs, fans, and lights, answering questions, playing music, and more. Other popular voice-based mobile assistants like Siri and Alexa can tell you about the weather, current time, set up alarms/reminders, and help you in many more routine activities.\nNow, imagine the possibilities when voice commands meet the eyes of AI. With computer vision, you can take VAs to the next level.\nProblem Statement\nLet\u2019s face it. Most of us misplace our cell phones/sunglasses/keys, etc. from time to time, leading to stress and time wastage. The current challenge is to enhance voice assistants (VAs) to provide accurate location information for such misplaced items, transforming the way we interact with our belongings.\nObjective\nYour objective is to build a low-cost smart voice assistant to locate misplaced belongings. By leveraging readily available technologies and addressing practical considerations, develop a valuable tool with diverse applications across various industries. Some of the industry applications are given below:\nInventory Management: Track and locate tools/items/equipment in workshops, hospitals, warehouses, or retail stores.\nAsset Tracking: Monitor the location of valuable assets like art, jewelry, or medical equipment.\nChild Safety: Provide real-time location tracking for children or pets within a designated area.\nSenior Care: Assist seniors with memory/vision impairments by locating their belongings or offering reminders.\nThis project aims to expand the capabilities of VAs beyond basic functions. Learners will implement features like timekeeping, date/day display, and LLM-powered question-answering while integrating groundbreaking computer vision technology. This will allow the VA to track down misplaced belongings, making it a versatile and helpful tool for forgetful individuals and busy professionals.",
+    "criteria": [
+      {
+        "name": "Design and Architecture (10%): Code quality, modularity, and scalability.",
+        "description": "Integration (15%): Seamless integration of voice assistant, computer vision, and other components."
+      },
+      {
+        "name": "1. Signal Processing and Sensor Fusion:",
+        "description": "Understand how to process signals from various sensors, like Bluetooth Low Energy (BLE) beacons or Ultra Wideband (UWB) radio technology, accelerometers, and magnetometers, to accurately estimate item location."
+      },
+      {
+        "name": "2. Machine Learning for Location Prediction:",
+        "description": "Explore machine learning techniques, such as Kalman filters, particle filters etc. to predict the location of misplaced items based on historical data and sensor readings."
+      },
+      {
+        "name": "3. User Interface and User Experience (UI/UX):",
+        "description": "Design a more user-friendly and intuitive interface for the voice assistant that is easy to navigate and understand."
+      },
+      {
+        "name": "4. System Integration and Deployment:",
+        "description": "Consider cloud-based deployment options for scalability and accessibility."
+      },
+      {
+        "name": "5. Monitoring and Performance Evaluation:",
+        "description": "Implement monitoring tools to track the performance of the assistant and identify potential issues."
+      }
+    ]
+  }
+]

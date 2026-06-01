@@ -12,16 +12,18 @@ const CATEGORY_ICONS: Record<ProjectCategory, string> = {
   "dl-mini-project": "🧠",
   "case-study-1": "📊",
   "case-study-2": "🎬",
-  capstone: "🎓",
+  "capstone-flagship": "🚀",
+  "capstone-advanced": "⚡",
   "bring-your-own": "📁",
 };
 
 const CATEGORY_DESCRIPTIONS: Record<ProjectCategory, string> = {
-  "ml-mini-project": "Lending Club Loan Approval & similar ML projects",
-  "dl-mini-project": "Deep learning projects with neural networks",
-  "case-study-1": "Business case study analysis",
-  "case-study-2": "IMDB CineBot & similar NLP/chatbot projects",
-  capstone: "End-to-end capstone projects",
+  "ml-mini-project": "LearningHope, Lending Club & similar ML projects",
+  "dl-mini-project": "Group Emotion Prediction, Spoiler Shield & DL projects",
+  "case-study-1": "Lending Club Loan Approval case study",
+  "case-study-2": "IMDB CineBot & NLP/chatbot projects",
+  "capstone-flagship": "Blue Horizon, CyberShield, MediBot & 7 more",
+  "capstone-advanced": "MediWatch, Resume Coach, VisionAssist & 7 more",
   "bring-your-own": "Custom project with your own problem statement",
 };
 
@@ -32,7 +34,7 @@ export default function CategorySelector({
   const categories = Object.keys(CATEGORY_LABELS) as ProjectCategory[];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       {categories.map((cat) => (
         <button
           key={cat}
@@ -50,7 +52,7 @@ export default function CategorySelector({
           >
             {CATEGORY_LABELS[cat]}
           </div>
-          <div className="text-xs text-gray-500 mt-1">
+          <div className="text-xs text-gray-500 mt-1 leading-relaxed">
             {CATEGORY_DESCRIPTIONS[cat]}
           </div>
           {value === cat && (

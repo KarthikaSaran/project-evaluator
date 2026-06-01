@@ -2,13 +2,14 @@ import OpenAI from "openai";
 import {
   EvaluationResult,
   SubmissionFile,
-  ProblemStatement,
+  ProjectData,
   ProjectCategory,
   EvaluationSection,
   ShortcomingWithSuggestion,
   BonusPoints,
+  CriterionData,
 } from "./types";
-import { PROBLEM_STATEMENTS } from "./problemStatements";
+import { ALL_PROJECTS } from "./problemStatements";
 
 function getOpenAI() {
   return new OpenAI({
@@ -19,49 +20,51 @@ function getOpenAI() {
 export async function evaluateSubmission(
   files: SubmissionFile[],
   category: ProjectCategory,
+  projectId?: string,
   customProblemStatement?: string
 ): Promise<EvaluationResult> {
   const combinedContent = files
     .map((f) => `=== File: ${f.name} (${f.type}) ===\n${f.content}`)
     .join("\n\n");
 
-  let problemStatement: ProblemStatement | undefined;
+  let project: ProjectData | undefined;
   let problemContext: string;
+  let criteria: CriterionData[];
 
   if (category === "bring-your-own" && customProblemStatement) {
     problemContext = customProblemStatement;
-  } else {
-    problemStatement = PROBLEM_STATEMENTS.find(
-      (ps) => ps.category === category
-    );
-    if (!problemStatement) {
-      problemStatement = await autoDetectProject(combinedContent);
+    criteria = getGenericCriteria();
+  } else if (projectId) {
+    project = ALL_PROJECTS.find((p) => p.id === projectId);
+    if (project) {
+      problemContext = `Title: ${project.title}\nDescription: ${project.description}\n\nFull Problem Statement:\n${project.fullContent}`;
+      criteria = project.criteria.length > 0 ? project.criteria : getGenericCriteria();
+    } else {
+      problemContext = "Unknown project. Evaluate as a general data science / ML project.";
+      criteria = getGenericCriteria();
     }
-    problemContext = problemStatement
-      ? `Title: ${problemStatement.title}\nDescription: ${problemStatement.description}\nExpected Deliverables: ${problemStatement.deliverables.join(", ")}`
-      : "Unable to detect specific project. Evaluate as a general data science / ML project.";
+  } else {
+    project = await autoDetectProject(combinedContent, category);
+    if (project) {
+      problemContext = `Title: ${project.title}\nDescription: ${project.description}\n\nFull Problem Statement:\n${project.fullContent}`;
+      criteria = project.criteria.length > 0 ? project.criteria : getGenericCriteria();
+    } else {
+      problemContext = "Unable to detect specific project. Evaluate as a general data science / ML project.";
+      criteria = getGenericCriteria();
+    }
   }
-
-  const criteria = problemStatement?.evaluationCriteria || getGenericCriteria();
 
   const evaluationPrompt = buildEvaluationPrompt(
     combinedContent,
     problemContext,
-    criteria,
-    category
+    criteria
   );
 
   const response = await getOpenAI().chat.completions.create({
     model: "gpt-4o",
     messages: [
-      {
-        role: "system",
-        content: SYSTEM_PROMPT,
-      },
-      {
-        role: "user",
-        content: evaluationPrompt,
-      },
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: evaluationPrompt },
     ],
     temperature: 0.3,
     max_tokens: 8000,
@@ -76,14 +79,26 @@ export async function evaluateSubmission(
     rawResult,
     files[0]?.name || "Unknown",
     category,
-    problemStatement?.title || rawResult.detectedProject || "Custom Project"
+    project?.title || rawResult.detectedProject || "Custom Project"
   );
 }
 
 async function autoDetectProject(
-  content: string
-): Promise<ProblemStatement | undefined> {
+  content: string,
+  category: ProjectCategory
+): Promise<ProjectData | undefined> {
   const snippet = content.slice(0, 3000);
+  const candidates =
+    category !== "bring-your-own"
+      ? ALL_PROJECTS.filter((p) => p.category === category)
+      : ALL_PROJECTS;
+
+  if (candidates.length === 0) return undefined;
+  if (candidates.length === 1) return candidates[0];
+
+  const projectList = candidates
+    .map((p) => `- ${p.id}: ${p.title} (${p.description.slice(0, 80)})`)
+    .join("\n");
 
   const response = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
@@ -91,11 +106,11 @@ async function autoDetectProject(
       {
         role: "system",
         content:
-          "You identify which project a code submission belongs to. Return JSON with a single field 'projectId' matching one of the known projects, or 'unknown'.",
+          "You identify which project a code submission belongs to. Return JSON with a single field 'projectId'.",
       },
       {
         role: "user",
-        content: `Known projects:\n${PROBLEM_STATEMENTS.map((ps) => `- ${ps.id}: ${ps.title}`).join("\n")}\n\nSubmission snippet:\n${snippet}\n\nWhich project does this belong to? Return JSON: {"projectId": "..."}`,
+        content: `Known projects in category "${category}":\n${projectList}\n\nSubmission snippet:\n${snippet}\n\nWhich project does this belong to? Return JSON: {"projectId": "..."}`,
       },
     ],
     temperature: 0,
@@ -105,10 +120,10 @@ async function autoDetectProject(
   const result = JSON.parse(
     response.choices[0].message.content || '{"projectId": "unknown"}'
   );
-  return PROBLEM_STATEMENTS.find((ps) => ps.id === result.projectId);
+  return candidates.find((p) => p.id === result.projectId);
 }
 
-const SYSTEM_PROMPT = `You are an expert technical evaluator and interviewer who reviews take-home assignments for data science, machine learning, and deep learning projects.
+const SYSTEM_PROMPT = `You are an expert technical evaluator and interviewer who reviews take-home assignments for data science, machine learning, deep learning, NLP, computer vision, and Gen AI projects.
 
 Your evaluation style is like a senior interviewer at a top tech company reviewing a candidate's take-home assignment. You are:
 - Thorough but fair
@@ -121,23 +136,24 @@ IMPORTANT RULES:
 1. Every shortcoming MUST be paired with a specific, actionable suggestion to overcome it
 2. Score generously for genuine effort but accurately for technical quality
 3. Award bonus points for: extra features, creative approaches, clean code, good documentation, deployment readiness, use of advanced techniques
-4. The feedback should help the learner grow — be the mentor they need
-5. If the submission is from a spreadsheet (approach summary only, no code), evaluate based on the described approach and methodology`;
+4. The feedback should help the learner grow - be the mentor they need
+5. If the submission is from a spreadsheet (approach summary only, no code), evaluate based on the described approach and methodology
+6. Evaluate EACH criterion from the rubric individually with specific scores`;
 
 function buildEvaluationPrompt(
   content: string,
   problemContext: string,
-  criteria: { name: string; description: string; maxScore: number }[],
-  category: ProjectCategory
+  criteria: CriterionData[]
 ): string {
+  const maxPerCriterion = Math.max(5, Math.round(100 / Math.max(criteria.length, 1)));
   const criteriaList = criteria
     .map(
       (c) =>
-        `- ${c.name} (max ${c.maxScore} points): ${c.description}`
+        `- ${c.name} (max ${maxPerCriterion} points): ${c.description || "Evaluate quality and completeness"}`
     )
     .join("\n");
 
-  const maxTotal = criteria.reduce((sum, c) => sum + c.maxScore, 0);
+  const maxTotal = maxPerCriterion * criteria.length;
 
   return `## Problem Statement
 ${problemContext}
@@ -161,7 +177,7 @@ Evaluate this submission and return a JSON object with EXACTLY this structure:
     {
       "criterionName": "Section name matching criteria above",
       "score": <number>,
-      "maxScore": <number>,
+      "maxScore": ${maxPerCriterion},
       "rating": "Excellent" | "Good" | "Fair" | "Poor",
       "feedback": "Detailed paragraph of feedback",
       "strengths": ["strength 1", "strength 2"],
@@ -185,53 +201,18 @@ Evaluate this submission and return a JSON object with EXACTLY this structure:
   "interviewerFeedback": "A 3-4 paragraph interviewer-style feedback as if you're sitting across the table from the candidate. Be encouraging but honest. Highlight what impressed you, what concerned you, and specific next steps for growth. End with a motivating note."
 }
 
-Be thorough, fair, and constructive. Every shortcoming must have a paired suggestion.`;
+You MUST return one section for EACH criterion listed above. Be thorough, fair, and constructive. Every shortcoming must have a paired suggestion.`;
 }
 
-function getGenericCriteria() {
+function getGenericCriteria(): CriterionData[] {
   return [
-    {
-      name: "Problem Understanding & Dataset Overview",
-      description:
-        "Understanding of the problem, dataset exploration, feature documentation",
-      maxScore: 15,
-    },
-    {
-      name: "Data Preprocessing & Feature Engineering",
-      description:
-        "Data cleaning, missing values, encoding, scaling, feature creation",
-      maxScore: 15,
-    },
-    {
-      name: "Exploratory Data Analysis",
-      description:
-        "Visualizations, statistical analysis, pattern identification",
-      maxScore: 15,
-    },
-    {
-      name: "Model Implementation",
-      description:
-        "Algorithm selection, implementation quality, technical correctness",
-      maxScore: 20,
-    },
-    {
-      name: "Evaluation & Results",
-      description:
-        "Metrics selection, model comparison, interpretation of results",
-      maxScore: 15,
-    },
-    {
-      name: "Code Quality & Documentation",
-      description:
-        "Code organization, readability, comments, reproducibility",
-      maxScore: 10,
-    },
-    {
-      name: "Conclusions & Future Work",
-      description:
-        "Insights, recommendations, identified improvements",
-      maxScore: 10,
-    },
+    { name: "Problem Understanding & Dataset Overview", description: "Understanding of the problem, dataset exploration, feature documentation" },
+    { name: "Data Preprocessing & Feature Engineering", description: "Data cleaning, missing values, encoding, scaling, feature creation" },
+    { name: "Exploratory Data Analysis", description: "Visualizations, statistical analysis, pattern identification" },
+    { name: "Model Implementation", description: "Algorithm selection, implementation quality, technical correctness" },
+    { name: "Evaluation & Results", description: "Metrics selection, model comparison, interpretation of results" },
+    { name: "Code Quality & Documentation", description: "Code organization, readability, comments, reproducibility" },
+    { name: "Conclusions & Future Work", description: "Insights, recommendations, identified improvements" },
   ];
 }
 
@@ -264,9 +245,7 @@ function formatEvaluationResult(
   const maxSectionTotal = sections.reduce((sum, s) => sum + s.maxScore, 0);
 
   const bonus: BonusPoints = {
-    score: Number(
-      (raw.bonusPoints as Record<string, unknown>)?.score
-    ) || 0,
+    score: Number((raw.bonusPoints as Record<string, unknown>)?.score) || 0,
     maxScore: 15,
     details: (
       ((raw.bonusPoints as Record<string, unknown>)?.details as Array<Record<string, unknown>>) || []
@@ -288,7 +267,7 @@ function formatEvaluationResult(
     timestamp: new Date().toISOString(),
     overallScore,
     maxPossibleScore: maxPossible,
-    percentageScore: Math.round((overallScore / maxPossible) * 100),
+    percentageScore: maxPossible > 0 ? Math.round((overallScore / maxPossible) * 100) : 0,
     overallRating: String(raw.overallRating || "Fair"),
     sections,
     pros: (raw.pros as string[]) || [],

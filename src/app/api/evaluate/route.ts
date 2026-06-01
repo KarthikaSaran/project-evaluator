@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const files = formData.getAll("files") as File[];
     const category = formData.get("category") as ProjectCategory;
+    const projectId = formData.get("projectId") as string | null;
     const customProblemStatement = formData.get("problemStatement") as
       | string
       | null;
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
           const evaluation = await evaluateSubmission(
             [parsedFile],
             category,
+            projectId || undefined,
             customProblemStatement || undefined
           );
           results.push(evaluation);
@@ -53,6 +55,7 @@ export async function POST(request: NextRequest) {
         const evaluation = await evaluateSubmission(
           parsedFiles,
           category,
+          projectId || undefined,
           customProblemStatement || undefined
         );
         results.push(evaluation);

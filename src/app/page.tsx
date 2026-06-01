@@ -1,16 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import CategorySelector from "@/components/CategorySelector";
+import ProjectSelector from "@/components/ProjectSelector";
 import FileUpload from "@/components/FileUpload";
 import ResultCard from "@/components/ResultCard";
-import { ProjectCategory, EvaluationResult } from "@/lib/types";
+import { ProjectCategory, ProjectData, EvaluationResult } from "@/lib/types";
+import rawProjectData from "@/lib/projectData.json";
+
+const ALL_PROJECTS = rawProjectData as ProjectData[];
 
 type AppState = "upload" | "evaluating" | "results";
 
 export default function Home() {
   const [state, setState] = useState<AppState>("upload");
   const [category, setCategory] = useState<ProjectCategory>("ml-mini-project");
+  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [problemStatementFile, setProblemStatementFile] = useState<File[]>([]);
   const [problemStatementText, setProblemStatementText] = useState("");
@@ -18,6 +23,16 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const categoryProjects = useMemo(
+    () => ALL_PROJECTS.filter((p) => p.category === category),
+    [category]
+  );
+
+  const handleCategoryChange = (cat: ProjectCategory) => {
+    setCategory(cat);
+    setSelectedProjectId("");
+  };
 
   const handleSubmit = async () => {
     if (files.length === 0) {
@@ -41,6 +56,10 @@ export default function Home() {
         const formData = new FormData();
         formData.append("files", files[i]);
         formData.append("category", category);
+
+        if (selectedProjectId) {
+          formData.append("projectId", selectedProjectId);
+        }
 
         if (category === "bring-your-own") {
           if (problemStatementFile.length > 0) {
@@ -120,10 +139,18 @@ export default function Home() {
     setFiles([]);
     setProblemStatementFile([]);
     setProblemStatementText("");
+    setSelectedProjectId("");
     setResults([]);
     setError(null);
     setProgress({ current: 0, total: 0 });
   };
+
+  const stepNumber = (() => {
+    let n = 2;
+    if (category !== "bring-your-own" && categoryProjects.length > 1) n++;
+    if (category === "bring-your-own") n++;
+    return n;
+  })();
 
   return (
     <main className="min-h-screen">
@@ -148,18 +175,8 @@ export default function Home() {
               onClick={handleReset}
               className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1.5"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               New Evaluation
             </button>
@@ -176,18 +193,37 @@ export default function Home() {
               </h2>
               <p className="text-gray-500 mt-2 max-w-2xl mx-auto">
                 Upload student submissions to get detailed AI-powered evaluation
-                reports with scores, feedback, and actionable improvement
-                suggestions.
+                reports. Supports {ALL_PROJECTS.length} projects across 6 categories.
               </p>
             </div>
 
+            {/* Step 1: Category */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h3 className="font-semibold text-gray-800 mb-4">
                 1. Select Project Category
               </h3>
-              <CategorySelector value={category} onChange={setCategory} />
+              <CategorySelector value={category} onChange={handleCategoryChange} />
             </div>
 
+            {/* Step 2 (optional): Project within category */}
+            {category !== "bring-your-own" && categoryProjects.length > 1 && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <h3 className="font-semibold text-gray-800 mb-4">
+                  2. Select Project
+                  <span className="text-sm font-normal text-gray-400 ml-2">
+                    (or let AI auto-detect)
+                  </span>
+                </h3>
+                <ProjectSelector
+                  projects={categoryProjects}
+                  category={category}
+                  selectedId={selectedProjectId}
+                  onChange={setSelectedProjectId}
+                />
+              </div>
+            )}
+
+            {/* Bring Your Own: Problem Statement */}
             {category === "bring-your-own" && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                 <h3 className="font-semibold text-gray-800 mb-4">
@@ -206,9 +242,7 @@ export default function Home() {
                       <div className="w-full border-t border-gray-200" />
                     </div>
                     <div className="relative flex justify-center text-xs">
-                      <span className="bg-white px-3 text-gray-400">
-                        or paste below
-                      </span>
+                      <span className="bg-white px-3 text-gray-400">or paste below</span>
                     </div>
                   </div>
                   <textarea
@@ -222,9 +256,10 @@ export default function Home() {
               </div>
             )}
 
+            {/* Upload Submissions */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
               <h3 className="font-semibold text-gray-800 mb-4">
-                {category === "bring-your-own" ? "3" : "2"}. Upload Submissions
+                {stepNumber}. Upload Submissions
               </h3>
               <FileUpload
                 files={files}
@@ -236,16 +271,8 @@ export default function Home() {
 
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-                <svg
-                  className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
+                <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
                 <p className="text-sm text-red-700">{error}</p>
               </div>
@@ -257,8 +284,7 @@ export default function Home() {
               disabled={files.length === 0}
               className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
             >
-              Evaluate {files.length} Submission
-              {files.length !== 1 ? "s" : ""}
+              Evaluate {files.length} Submission{files.length !== 1 ? "s" : ""}
             </button>
           </div>
         )}
@@ -268,17 +294,9 @@ export default function Home() {
             <div className="relative w-20 h-20 mb-6">
               <div className="absolute inset-0 rounded-full border-4 border-blue-100" />
               <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 animate-spin" />
-              <div
-                className="absolute inset-3 rounded-full border-4 border-transparent border-t-indigo-500 animate-spin"
-                style={{
-                  animationDirection: "reverse",
-                  animationDuration: "1.5s",
-                }}
-              />
+              <div className="absolute inset-3 rounded-full border-4 border-transparent border-t-indigo-500 animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">
-              Evaluating Submissions
-            </h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">Evaluating Submissions</h3>
             <p className="text-gray-500 text-sm mb-4">
               {progress.current > 0
                 ? `Processing file ${progress.current} of ${progress.total}...`
@@ -287,14 +305,11 @@ export default function Home() {
             <div className="w-64 bg-gray-200 rounded-full h-2">
               <div
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500"
-                style={{
-                  width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
-                }}
+                style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
               />
             </div>
             <p className="text-xs text-gray-400 mt-6 max-w-sm text-center">
-              AI is analyzing code quality, methodology, and generating detailed
-              feedback. This may take a few minutes per submission.
+              AI is analyzing code quality, methodology, and generating detailed feedback. This may take a few minutes per submission.
             </p>
           </div>
         )}
@@ -303,12 +318,9 @@ export default function Home() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Evaluation Results
-                </h2>
+                <h2 className="text-2xl font-bold text-gray-900">Evaluation Results</h2>
                 <p className="text-gray-500 text-sm mt-1">
-                  {results.length} submission{results.length !== 1 ? "s" : ""}{" "}
-                  evaluated
+                  {results.length} submission{results.length !== 1 ? "s" : ""} evaluated
                 </p>
               </div>
               {results.length > 1 && (
@@ -317,18 +329,8 @@ export default function Home() {
                   onClick={handleDownloadAll}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                   Download All PDFs
                 </button>
