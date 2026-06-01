@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import JSZip from "jszip";
 import FileUpload from "./FileUpload";
+import GoogleSignIn, { AuthStatus } from "./GoogleSignIn";
 import { ProjectCategory, EvaluationResult } from "@/lib/types";
 import {
   parseDriveSheet,
@@ -14,8 +15,12 @@ import {
 
 interface DriveSheetModeProps {
   category: ProjectCategory;
-  projectId: string;
+  projectId?: string;
   stepNumber: number;
+  /** Pre-loaded file from the parent page — auto-runs Inspect on mount. */
+  initialFile?: File | null;
+  /** Called when user wants to go back to the upload screen. */
+  onReset?: () => void;
 }
 
 type Phase = "upload" | "preview" | "evaluating" | "done";
@@ -37,9 +42,11 @@ export default function DriveSheetMode({
   category,
   projectId,
   stepNumber,
+  initialFile,
+  onReset,
 }: DriveSheetModeProps) {
-  const [files, setFiles] = useState<File[]>([]);
-  const [phase, setPhase] = useState<Phase>("upload");
+  const [files, setFiles] = useState<File[]>(initialFile ? [initialFile] : []);
+  const [phase, setPhase] = useState<Phase>(initialFile ? "preview" : "upload");
   const [parsed, setParsed] = useState<ParsedDriveSheet | null>(null);
   const [rowProgress, setRowProgress] = useState<RowProgress[]>([]);
   const [results, setResults] = useState<EvaluationResult[]>([]);
@@ -47,34 +54,50 @@ export default function DriveSheetMode({
   const [updatedXlsxBlob, setUpdatedXlsxBlob] = useState<Blob | null>(null);
   const [zipBlob, setZipBlob] = useState<Blob | null>(null);
   const [building, setBuilding] = useState(false);
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
 
-  // ------------------------------------------------------------- handle parse
-  const handlePreview = async () => {
+  const previewedRef = useRef(false);
+
+  // Auto-trigger Inspect when the parent hands us a file we haven't parsed yet
+  useEffect(() => {
+    if (initialFile && !previewedRef.current) {
+      previewedRef.current = true;
+      void doParse(initialFile);
+    }
+  }, [initialFile]);
+
+  // ---------------------------------------------------------------- parsing
+  const doParse = async (file: File) => {
     setError(null);
+    try {
+      const buf = await file.arrayBuffer();
+      const p = parseDriveSheet(buf);
+      setParsed(p);
+      setRowProgress(
+        p.rows.map((r) => ({
+          rowIndex: r.rowIndex,
+          identifier: r.identifier,
+          driveLink: r.driveLink,
+          state: r.shouldSkip ? "skipped" : "pending",
+          status: r.shouldSkip ? r.skipReason || "Skipped" : "",
+        }))
+      );
+      setPhase("preview");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not parse spreadsheet");
+      setPhase("upload");
+    }
+  };
+
+  const handlePreview = async () => {
     if (files.length === 0) {
       setError("Please upload the Drive Links spreadsheet first.");
       return;
     }
-    try {
-      const buf = await files[0].arrayBuffer();
-      const p = parseDriveSheet(buf);
-      setParsed(p);
-
-      const initial: RowProgress[] = p.rows.map((r) => ({
-        rowIndex: r.rowIndex,
-        identifier: r.identifier,
-        driveLink: r.driveLink,
-        state: r.shouldSkip ? "skipped" : "pending",
-        status: r.shouldSkip ? r.skipReason || "Skipped" : "",
-      }));
-      setRowProgress(initial);
-      setPhase("preview");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not parse spreadsheet");
-    }
+    await doParse(files[0]);
   };
 
-  // ------------------------------------------------------------- run all
+  // -------------------------------------------------------- run all rows
   const handleRunAll = async () => {
     if (!parsed) return;
     setError(null);
@@ -88,8 +111,11 @@ export default function DriveSheetMode({
       const row = parsed.rows[i];
       if (row.shouldSkip) continue;
 
-      // mark running
-      updated[i] = { ...updated[i], state: "running", status: "Evaluating..." };
+      updated[i] = {
+        ...updated[i],
+        state: "running",
+        status: "Evaluating...",
+      };
       setRowProgress([...updated]);
 
       try {
@@ -140,7 +166,7 @@ export default function DriveSheetMode({
     setPhase("done");
   };
 
-  // --------------------------------------------------- build zip + updated xlsx
+  // ----------------------------------------------- build zip + updated xlsx
   const buildDownloads = async (
     finalRowProgress: RowProgress[],
     finalResults: EvaluationResult[]
@@ -148,11 +174,8 @@ export default function DriveSheetMode({
     if (!parsed) return;
     setBuilding(true);
     try {
-      // 1) Build the updated workbook
       const sheetUpdates: RowUpdate[] = finalRowProgress
-        .filter(
-          (r) => r.state === "success" || r.state === "failed"
-        )
+        .filter((r) => r.state === "success" || r.state === "failed")
         .map((r) => ({
           rowIndex: r.rowIndex,
           status: r.status,
@@ -166,7 +189,6 @@ export default function DriveSheetMode({
         })
       );
 
-      // 2) Build a ZIP of PDF reports (one per successful result)
       if (finalResults.length > 0) {
         const zip = new JSZip();
         for (const result of finalResults) {
@@ -201,7 +223,7 @@ export default function DriveSheetMode({
     }
   };
 
-  // ------------------------------------------------------------- downloads
+  // -------------------------------------------------------------- downloads
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -238,9 +260,11 @@ export default function DriveSheetMode({
     setError(null);
     setUpdatedXlsxBlob(null);
     setZipBlob(null);
+    previewedRef.current = false;
+    onReset?.();
   };
 
-  // ----------------------------------------------------------------- render
+  // ------------------------------------------------------------------ derived
   const totalRows = parsed?.rows.length || 0;
   const toEvaluate = parsed?.rows.filter((r) => !r.shouldSkip).length || 0;
   const toSkip = totalRows - toEvaluate;
@@ -251,6 +275,13 @@ export default function DriveSheetMode({
   const successCount = rowProgress.filter((r) => r.state === "success").length;
   const failedCount = rowProgress.filter((r) => r.state === "failed").length;
 
+  const showSignInNudge =
+    !!authStatus &&
+    authStatus.configured &&
+    !authStatus.signedIn &&
+    (phase === "preview" || phase === "upload");
+
+  // ---------------------------------------------------------------- render
   return (
     <div className="space-y-6">
       {phase === "upload" && (
@@ -260,11 +291,10 @@ export default function DriveSheetMode({
               {stepNumber}. Upload Drive Links Spreadsheet
             </h3>
             <p className="text-xs text-gray-500 mb-4">
-              An <code className="bg-gray-100 px-1 rounded">.xlsx</code> where each row contains a
-              public Google Drive link (set to{" "}
-              <em>Anyone with the link can view</em>) pointing to a single submission file
-              (.ipynb, .py, .zip, etc.). The app will auto-detect link, identifier, status, and
-              score columns. Folder links and Google Docs links are not supported (yet).
+              An <code className="bg-gray-100 px-1 rounded">.xlsx</code> where each row
+              contains a Google Drive link to a single submission file. Auto-detects
+              link / identifier / status / score columns. Folder links and Google Docs
+              are not supported (yet).
             </p>
             <FileUpload
               files={files}
@@ -294,6 +324,8 @@ export default function DriveSheetMode({
 
       {(phase === "preview" || phase === "evaluating" || phase === "done") && parsed && (
         <div className="space-y-6">
+          <SignInBanner show={showSignInNudge} onAuthChange={setAuthStatus} />
+
           <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-800">Sheet Detected</h3>
@@ -309,7 +341,10 @@ export default function DriveSheetMode({
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
               <DetectedField label="Sheet" value={parsed.sheetName} />
-              <DetectedField label="Drive link column" value={parsed.columns.linkCol} />
+              <DetectedField
+                label="Drive link column"
+                value={parsed.columns.linkCol}
+              />
               <DetectedField
                 label="Identifier column"
                 value={parsed.columns.idCol || "(none — using row #)"}
@@ -328,7 +363,10 @@ export default function DriveSheetMode({
               />
               <DetectedField label="Total rows" value={String(totalRows)} />
               <DetectedField label="To evaluate" value={String(toEvaluate)} />
-              <DetectedField label="To skip (already done / no link)" value={String(toSkip)} />
+              <DetectedField
+                label="To skip (already done / no link)"
+                value={String(toSkip)}
+              />
             </div>
           </div>
 
@@ -364,8 +402,8 @@ export default function DriveSheetMode({
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-gray-800">Evaluating...</h3>
                   <div className="text-xs text-gray-500">
-                    {completed} / {totalRows} processed · {successCount} ok · {failedCount}{" "}
-                    failed
+                    {completed} / {totalRows} processed · {successCount} ok ·{" "}
+                    {failedCount} failed
                   </div>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
@@ -395,7 +433,9 @@ export default function DriveSheetMode({
           {phase === "done" && (
             <>
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <h3 className="font-semibold text-gray-800 mb-4">Evaluation Summary</h3>
+                <h3 className="font-semibold text-gray-800 mb-4">
+                  Evaluation Summary
+                </h3>
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <StatTile label="Evaluated" value={successCount} tone="success" />
                   <StatTile label="Failed" value={failedCount} tone="danger" />
@@ -436,8 +476,9 @@ export default function DriveSheetMode({
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Re-upload the updated sheet next time — rows marked &ldquo;{SUCCESS_STATUS}
-                  &rdquo; will be skipped, and any failed/blank rows will be re-tried.
+                  Re-upload the updated sheet next time — rows marked &ldquo;
+                  {SUCCESS_STATUS}&rdquo; will be skipped, and any failed/blank rows
+                  will be re-tried.
                 </p>
               </div>
 
@@ -458,7 +499,29 @@ export default function DriveSheetMode({
   );
 }
 
-// ----------------------------------------------------------------- subviews
+// ------------------------------------------------------------------- subviews
+
+function SignInBanner({
+  show,
+  onAuthChange,
+}: {
+  show: boolean;
+  onAuthChange: (s: AuthStatus) => void;
+}) {
+  return (
+    <div
+      className={`${
+        show ? "" : "hidden"
+      } bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3`}
+    >
+      <div className="text-sm text-amber-800">
+        Drive links shared with the <strong>@interviewkickstart.com</strong> domain need
+        sign-in. Public &ldquo;Anyone with the link&rdquo; files work without it.
+      </div>
+      <GoogleSignIn onChange={onAuthChange} compact />
+    </div>
+  );
+}
 
 function DetectedField({ label, value }: { label: string; value: string }) {
   return (
@@ -560,7 +623,9 @@ function StatusBadge({
     failed: "bg-red-100 text-red-700",
   };
   return (
-    <span className={`inline-block text-xs px-2 py-0.5 rounded-full ${palette[state]}`}>
+    <span
+      className={`inline-block text-xs px-2 py-0.5 rounded-full ${palette[state]}`}
+    >
       {text}
     </span>
   );

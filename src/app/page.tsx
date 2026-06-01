@@ -1,24 +1,22 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import CategorySelector from "@/components/CategorySelector";
-import ProjectSelector from "@/components/ProjectSelector";
 import FileUpload from "@/components/FileUpload";
 import ResultCard from "@/components/ResultCard";
 import DriveSheetMode from "@/components/DriveSheetMode";
-import { ProjectCategory, ProjectData, EvaluationResult } from "@/lib/types";
+import GoogleSignIn from "@/components/GoogleSignIn";
+import { ProjectCategory, EvaluationResult } from "@/lib/types";
 import rawProjectData from "@/lib/projectData.json";
+import { parseDriveSheet } from "@/lib/driveSheetClient";
 
-const ALL_PROJECTS = rawProjectData as ProjectData[];
+const ALL_PROJECTS = rawProjectData as Array<{ id: string }>;
 
-type AppState = "upload" | "evaluating" | "results";
-type UploadMode = "files" | "drive-sheet";
+type AppState = "upload" | "evaluating" | "drive-sheet" | "results";
 
 export default function Home() {
   const [state, setState] = useState<AppState>("upload");
   const [category, setCategory] = useState<ProjectCategory>("ml-mini-project");
-  const [selectedProjectId, setSelectedProjectId] = useState("");
-  const [uploadMode, setUploadMode] = useState<UploadMode>("files");
   const [files, setFiles] = useState<File[]>([]);
   const [problemStatementFile, setProblemStatementFile] = useState<File[]>([]);
   const [problemStatementText, setProblemStatementText] = useState("");
@@ -26,28 +24,51 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-
-  const categoryProjects = useMemo(
-    () => ALL_PROJECTS.filter((p) => p.category === category),
-    [category]
-  );
+  const [driveSheetFile, setDriveSheetFile] = useState<File | null>(null);
 
   const handleCategoryChange = (cat: ProjectCategory) => {
     setCategory(cat);
-    setSelectedProjectId("");
-    // Drive-sheet mode doesn't make sense for BYOP (per-row problem statements)
-    if (cat === "bring-your-own" && uploadMode === "drive-sheet") {
-      setUploadMode("files");
+  };
+
+  // ----- Decide drive-sheet vs files mode on the client by peeking at xlsx -----
+  const looksLikeDriveSheet = async (file: File): Promise<boolean> => {
+    try {
+      const buf = await file.arrayBuffer();
+      // parseDriveSheet throws if no link column can be detected
+      const parsed = parseDriveSheet(buf);
+      // Require at least one row with an actual Drive-looking URL
+      const hits = parsed.rows.filter((r) =>
+        /drive\.google\.com|colab\.research\.google\.com|docs\.google\.com/.test(
+          r.driveLink
+        )
+      ).length;
+      return hits > 0;
+    } catch {
+      return false;
     }
   };
 
+  const isXlsx = (f: File) => /\.(xlsx|xls)$/i.test(f.name);
+
+  // ------------------------------------------------------------ submit
   const handleSubmit = async () => {
     if (files.length === 0) {
       setError("Please upload at least one submission file.");
       return;
     }
-
     setError(null);
+
+    // Auto-detect Drive Links Spreadsheet — single .xlsx whose cells look like Drive URLs
+    if (files.length === 1 && isXlsx(files[0])) {
+      const isDriveSheet = await looksLikeDriveSheet(files[0]);
+      if (isDriveSheet) {
+        setDriveSheetFile(files[0]);
+        setState("drive-sheet");
+        return;
+      }
+    }
+
+    // Otherwise: standard per-file evaluation flow (project auto-detected server-side)
     setState("evaluating");
     setResults([]);
 
@@ -63,10 +84,6 @@ export default function Home() {
         const formData = new FormData();
         formData.append("files", files[i]);
         formData.append("category", category);
-
-        if (selectedProjectId) {
-          formData.append("projectId", selectedProjectId);
-        }
 
         if (category === "bring-your-own") {
           if (problemStatementFile.length > 0) {
@@ -113,14 +130,15 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ result }),
       });
-
       if (!response.ok) throw new Error("PDF generation failed");
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Evaluation_Report_${result.submissionName.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 50)}.pdf`;
+      a.download = `Evaluation_Report_${result.submissionName
+        .replace(/[^a-zA-Z0-9_-]/g, "_")
+        .slice(0, 50)}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -146,21 +164,14 @@ export default function Home() {
     setFiles([]);
     setProblemStatementFile([]);
     setProblemStatementText("");
-    setSelectedProjectId("");
     setResults([]);
     setError(null);
     setProgress({ current: 0, total: 0 });
+    setDriveSheetFile(null);
   };
 
-  // Compute step numbering dynamically based on which sections are visible
-  const hasProjectStep =
-    category !== "bring-your-own" && categoryProjects.length > 1;
   const hasBYOPStep = category === "bring-your-own";
-  const modeStepNumber = 1 + 1 + (hasProjectStep ? 1 : 0); // category + (project) + mode
-  const finalStepNumber =
-    modeStepNumber + (hasBYOPStep ? 1 : 0); // + BYOP problem statement
-
-  const showModeToggle = category !== "bring-your-own";
+  const uploadStepNumber = 1 + (hasBYOPStep ? 1 : 0) + 1; // category + (BYOP) + upload
 
   return (
     <main className="min-h-screen">
@@ -179,18 +190,26 @@ export default function Home() {
               </p>
             </div>
           </div>
-          {state === "results" && (
-            <button
-              type="button"
-              onClick={handleReset}
-              className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1.5"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              New Evaluation
-            </button>
-          )}
+          <div className="flex items-center gap-4">
+            <GoogleSignIn />
+            {(state === "results" || state === "drive-sheet") && (
+              <button
+                type="button"
+                onClick={handleReset}
+                className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1.5"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                New Evaluation
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
@@ -202,8 +221,9 @@ export default function Home() {
                 Evaluate Project Submissions
               </h2>
               <p className="text-gray-500 mt-2 max-w-2xl mx-auto">
-                Upload student submissions to get detailed AI-powered evaluation
-                reports. Supports {ALL_PROJECTS.length} projects across 6 categories.
+                Upload submission files or a spreadsheet of Drive links. The AI
+                figures out which of the {ALL_PROJECTS.length} known projects
+                each submission belongs to and grades it.
               </p>
             </div>
 
@@ -215,25 +235,7 @@ export default function Home() {
               <CategorySelector value={category} onChange={handleCategoryChange} />
             </div>
 
-            {/* Step 2 (optional): Project within category */}
-            {hasProjectStep && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <h3 className="font-semibold text-gray-800 mb-4">
-                  2. Select Project
-                  <span className="text-sm font-normal text-gray-400 ml-2">
-                    (or let AI auto-detect)
-                  </span>
-                </h3>
-                <ProjectSelector
-                  projects={categoryProjects}
-                  category={category}
-                  selectedId={selectedProjectId}
-                  onChange={setSelectedProjectId}
-                />
-              </div>
-            )}
-
-            {/* Bring Your Own: Problem Statement */}
+            {/* BYOP problem statement (only for "bring your own") */}
             {hasBYOPStep && (
               <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                 <h3 className="font-semibold text-gray-800 mb-4">
@@ -266,75 +268,63 @@ export default function Home() {
               </div>
             )}
 
-            {/* Mode Toggle (Files vs Drive Sheet) */}
-            {showModeToggle && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <h3 className="font-semibold text-gray-800 mb-3">
-                  {modeStepNumber}. Choose Input Mode
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <ModeOption
-                    label="Upload Files Directly"
-                    description="Upload .ipynb, .py, .zip files (one or many). Best for single or small batches."
-                    icon="📦"
-                    active={uploadMode === "files"}
-                    onClick={() => setUploadMode("files")}
+            {/* Upload — accepts files or a Drive-links spreadsheet */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <h3 className="font-semibold text-gray-800 mb-2">
+                {uploadStepNumber}. Upload Submissions
+              </h3>
+              <p className="text-xs text-gray-500 mb-4">
+                Drop individual files (<code className="bg-gray-100 px-1 rounded">.ipynb</code>,{" "}
+                <code className="bg-gray-100 px-1 rounded">.py</code>,{" "}
+                <code className="bg-gray-100 px-1 rounded">.zip</code>) or a single{" "}
+                <code className="bg-gray-100 px-1 rounded">.xlsx</code> containing Google
+                Drive links — the app detects which mode to use. For domain-restricted
+                Drive links (e.g. shared with @interviewkickstart.com), sign in first
+                using the button in the top right.
+              </p>
+              <FileUpload
+                files={files}
+                onFilesChange={setFiles}
+                accept=".ipynb,.py,.zip,.xlsx,.xls"
+                label="Drop submission files or a Drive-links .xlsx"
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                <svg
+                  className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
                   />
-                  <ModeOption
-                    label="Drive Links Spreadsheet"
-                    description="Upload an .xlsx of public Drive links — evaluates all rows, fills Score & Status."
-                    icon="📑"
-                    active={uploadMode === "drive-sheet"}
-                    onClick={() => setUploadMode("drive-sheet")}
-                  />
-                </div>
+                </svg>
+                <p className="text-sm text-red-700">{error}</p>
               </div>
             )}
 
-            {/* Branch: Files Mode (existing) */}
-            {uploadMode === "files" && (
-              <>
-                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                  <h3 className="font-semibold text-gray-800 mb-4">
-                    {finalStepNumber + (showModeToggle ? 1 : 0)}. Upload Submissions
-                  </h3>
-                  <FileUpload
-                    files={files}
-                    onFilesChange={setFiles}
-                    accept=".ipynb,.py,.zip,.xlsx,.xls"
-                    label="Upload submission files (.ipynb, .py, .zip, or .xlsx for bulk)"
-                  />
-                </div>
-
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-                    <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={files.length === 0}
-                  className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
-                >
-                  Evaluate {files.length} Submission{files.length !== 1 ? "s" : ""}
-                </button>
-              </>
-            )}
-
-            {/* Branch: Drive Sheet Mode (new) */}
-            {uploadMode === "drive-sheet" && showModeToggle && (
-              <DriveSheetMode
-                category={category}
-                projectId={selectedProjectId}
-                stepNumber={finalStepNumber + 1}
-              />
-            )}
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={files.length === 0}
+              className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
+            >
+              Evaluate {files.length} Submission{files.length !== 1 ? "s" : ""}
+            </button>
           </div>
+        )}
+
+        {state === "drive-sheet" && driveSheetFile && (
+          <DriveSheetMode
+            category={category}
+            initialFile={driveSheetFile}
+            stepNumber={uploadStepNumber}
+            onReset={handleReset}
+          />
         )}
 
         {state === "evaluating" && (
@@ -342,9 +332,14 @@ export default function Home() {
             <div className="relative w-20 h-20 mb-6">
               <div className="absolute inset-0 rounded-full border-4 border-blue-100" />
               <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-600 animate-spin" />
-              <div className="absolute inset-3 rounded-full border-4 border-transparent border-t-indigo-500 animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
+              <div
+                className="absolute inset-3 rounded-full border-4 border-transparent border-t-indigo-500 animate-spin"
+                style={{ animationDirection: "reverse", animationDuration: "1.5s" }}
+              />
             </div>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Evaluating Submissions</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              Evaluating Submissions
+            </h3>
             <p className="text-gray-500 text-sm mb-4">
               {progress.current > 0
                 ? `Processing file ${progress.current} of ${progress.total}...`
@@ -353,11 +348,16 @@ export default function Home() {
             <div className="w-64 bg-gray-200 rounded-full h-2">
               <div
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%` }}
+                style={{
+                  width: `${
+                    progress.total > 0 ? (progress.current / progress.total) * 100 : 0
+                  }%`,
+                }}
               />
             </div>
             <p className="text-xs text-gray-400 mt-6 max-w-sm text-center">
-              AI is analyzing code quality, methodology, and generating detailed feedback. This may take a few minutes per submission.
+              AI is analyzing code quality, methodology, and generating detailed feedback.
+              This may take a few minutes per submission.
             </p>
           </div>
         )}
@@ -377,8 +377,18 @@ export default function Home() {
                   onClick={handleDownloadAll}
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
                   </svg>
                   Download All PDFs
                 </button>
@@ -405,47 +415,5 @@ export default function Home() {
         )}
       </div>
     </main>
-  );
-}
-
-function ModeOption({
-  label,
-  description,
-  icon,
-  active,
-  onClick,
-}: {
-  label: string;
-  description: string;
-  icon: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`text-left p-4 rounded-xl border-2 transition-all duration-150 ${
-        active
-          ? "border-blue-500 bg-blue-50 shadow-sm shadow-blue-100"
-          : "border-gray-200 bg-white hover:border-gray-300"
-      }`}
-    >
-      <div className="flex items-start gap-3">
-        <div className="text-2xl leading-none">{icon}</div>
-        <div className="flex-1">
-          <div
-            className={`font-semibold text-sm ${
-              active ? "text-blue-700" : "text-gray-800"
-            }`}
-          >
-            {label}
-          </div>
-          <div className="text-xs text-gray-500 mt-1 leading-relaxed">
-            {description}
-          </div>
-        </div>
-      </div>
-    </button>
   );
 }

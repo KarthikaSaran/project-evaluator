@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseUploadedFile } from "@/lib/fileParser";
 import { evaluateSubmission } from "@/lib/evaluator";
 import { fetchDriveFile, statusFromErrorType } from "@/lib/driveFetch";
+import {
+  SESSION_COOKIE,
+  decodeSession,
+  encodeSession,
+  getValidAccessToken,
+  SESSION_MAX_AGE_SECONDS,
+} from "@/lib/googleOAuth";
 import { ProjectCategory } from "@/lib/types";
 
 export const maxDuration = 300;
@@ -20,25 +27,57 @@ export async function POST(request: NextRequest) {
 
     if (!driveLink) {
       return NextResponse.json(
-        { ok: false, status: "No Drive link", error: "driveLink is required" },
+        {
+          ok: false,
+          status: "No Drive link",
+          error: "driveLink is required",
+        },
         { status: 400 }
       );
     }
     if (!category) {
       return NextResponse.json(
-        { ok: false, status: "Missing category", error: "category is required" },
+        {
+          ok: false,
+          status: "Missing category",
+          error: "category is required",
+        },
         { status: 400 }
       );
     }
 
-    const fetched = await fetchDriveFile(driveLink);
+    // ---- Resolve a usable access token from the session cookie (if any) ----
+    const sessionToken = request.cookies.get(SESSION_COOKIE)?.value;
+    const session = decodeSession(sessionToken);
+    let accessToken: string | undefined;
+    let refreshedSessionCookie: string | undefined;
+
+    if (session) {
+      try {
+        const { accessToken: token, updatedSession } =
+          await getValidAccessToken(session);
+        accessToken = token;
+        if (updatedSession) {
+          refreshedSessionCookie = encodeSession(updatedSession);
+        }
+      } catch {
+        // Refresh failed — fall back to anonymous (will likely fail for domain-restricted files)
+      }
+    }
+
+    // ---- Try the fetch ----
+    const fetched = await fetchDriveFile(driveLink, accessToken);
 
     if (!fetched.ok || !fetched.data) {
-      return NextResponse.json({
+      const resp = NextResponse.json({
         ok: false,
         status: statusFromErrorType(fetched.errorType),
         error: fetched.error || "Drive fetch failed",
       });
+      if (refreshedSessionCookie) {
+        attachRefreshedCookie(resp, refreshedSessionCookie);
+      }
+      return resp;
     }
 
     const filename = fetched.filename || "drive_submission";
@@ -47,19 +86,25 @@ export async function POST(request: NextRequest) {
     try {
       parsedFiles = await parseUploadedFile(fetched.data, filename);
     } catch (e) {
-      return NextResponse.json({
+      const resp = NextResponse.json({
         ok: false,
         status: "Could not parse file",
         error: e instanceof Error ? e.message : "Parse failed",
       });
+      if (refreshedSessionCookie)
+        attachRefreshedCookie(resp, refreshedSessionCookie);
+      return resp;
     }
 
     if (!parsedFiles || parsedFiles.length === 0) {
-      return NextResponse.json({
+      const resp = NextResponse.json({
         ok: false,
         status: "Unsupported file type",
         error: `No parseable content in ${filename}`,
       });
+      if (refreshedSessionCookie)
+        attachRefreshedCookie(resp, refreshedSessionCookie);
+      return resp;
     }
 
     const evaluation = await evaluateSubmission(
@@ -72,12 +117,15 @@ export async function POST(request: NextRequest) {
       evaluation.submissionName = identifier;
     }
 
-    return NextResponse.json({
+    const resp = NextResponse.json({
       ok: true,
       status: "Evaluation done",
       result: evaluation,
       downloadedFilename: filename,
     });
+    if (refreshedSessionCookie)
+      attachRefreshedCookie(resp, refreshedSessionCookie);
+    return resp;
   } catch (error) {
     console.error("Drive row evaluation error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -87,4 +135,14 @@ export async function POST(request: NextRequest) {
       error: message,
     });
   }
+}
+
+function attachRefreshedCookie(resp: NextResponse, cookieValue: string) {
+  resp.cookies.set(SESSION_COOKIE, cookieValue, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_MAX_AGE_SECONDS,
+  });
 }
