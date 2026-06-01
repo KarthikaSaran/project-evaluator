@@ -382,8 +382,11 @@ export default function Home() {
                   className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-gray-800"
                 />
                 <p className="text-xs text-gray-400">
-                  Google Sheets are exported as .xlsx automatically (needs sign-in).
-                  Plain .xlsx Drive files work either signed in or via public sharing.
+                  This is the <strong>submissions sheet</strong> (the spreadsheet listing
+                  Name / Email / Drive Link rows) — not the folder where PDFs go. Google
+                  Sheets are exported as .xlsx automatically (needs sign-in); plain .xlsx
+                  Drive files work either signed in or via public sharing. The folder URL
+                  for PDF uploads is set in the next screen, after the sheet loads.
                 </p>
               </div>
             </div>

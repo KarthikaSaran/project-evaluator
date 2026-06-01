@@ -125,7 +125,8 @@ export async function fetchDriveSpreadsheet(
   if (parsed.kind === "folder") {
     return {
       ok: false,
-      error: "Folder link not supported - share a single sheet",
+      error:
+        "This field needs a link to a single sheet (.xlsx or Google Sheet), not a folder. If you want to upload the report PDFs to a folder, paste the sheet link here first — the folder URL goes in the next screen.",
       errorType: "folder",
     };
   }
