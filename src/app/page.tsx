@@ -25,9 +25,37 @@ export default function Home() {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [driveSheetFile, setDriveSheetFile] = useState<File | null>(null);
+  const [sheetLink, setSheetLink] = useState("");
+  const [fetchingSheet, setFetchingSheet] = useState(false);
 
   const handleCategoryChange = (cat: ProjectCategory) => {
     setCategory(cat);
+  };
+
+  /**
+   * Fetch an xlsx or Google Sheet from a Drive link and return it as a File.
+   * For Google Sheets the server exports to xlsx via the Drive API (needs sign-in).
+   */
+  const fetchSheetFromDriveLink = async (link: string): Promise<File> => {
+    const response = await fetch("/api/fetch-sheet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ driveLink: link }),
+    });
+    const data = await response.json();
+    if (!data.ok || !data.contentBase64) {
+      throw new Error(
+        data.error || data.status || "Could not fetch sheet from Drive link"
+      );
+    }
+    const binary = atob(data.contentBase64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return new File([bytes], data.filename || "drive_sheet.xlsx", {
+      type:
+        data.mimeType ||
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
   };
 
   // ----- Decide drive-sheet vs files mode on the client by peeking at xlsx -----
@@ -52,17 +80,44 @@ export default function Home() {
 
   // ------------------------------------------------------------ submit
   const handleSubmit = async () => {
-    if (files.length === 0) {
-      setError("Please upload at least one submission file.");
+    const hasFiles = files.length > 0;
+    const hasLink = sheetLink.trim().length > 0;
+
+    if (!hasFiles && !hasLink) {
+      setError("Upload a file or paste a Drive link to a sheet.");
+      return;
+    }
+    if (hasFiles && hasLink) {
+      setError(
+        "Either upload files OR paste a Drive link, not both. Clear one and try again."
+      );
       return;
     }
     setError(null);
 
+    let inputFiles: File[] = files;
+
+    // -- Drive link mode: fetch the xlsx/Google Sheet first --
+    if (hasLink) {
+      setFetchingSheet(true);
+      try {
+        const file = await fetchSheetFromDriveLink(sheetLink.trim());
+        inputFiles = [file];
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : "Could not fetch sheet from Drive"
+        );
+        setFetchingSheet(false);
+        return;
+      }
+      setFetchingSheet(false);
+    }
+
     // Auto-detect Drive Links Spreadsheet — single .xlsx whose cells look like Drive URLs
-    if (files.length === 1 && isXlsx(files[0])) {
-      const isDriveSheet = await looksLikeDriveSheet(files[0]);
+    if (inputFiles.length === 1 && isXlsx(inputFiles[0])) {
+      const isDriveSheet = await looksLikeDriveSheet(inputFiles[0]);
       if (isDriveSheet) {
-        setDriveSheetFile(files[0]);
+        setDriveSheetFile(inputFiles[0]);
         setState("drive-sheet");
         return;
       }
@@ -73,16 +128,16 @@ export default function Home() {
     setResults([]);
 
     try {
-      const totalFiles = files.length;
+      const totalFiles = inputFiles.length;
       setProgress({ current: 0, total: totalFiles });
 
       const allResults: EvaluationResult[] = [];
 
-      for (let i = 0; i < files.length; i++) {
+      for (let i = 0; i < inputFiles.length; i++) {
         setProgress({ current: i + 1, total: totalFiles });
 
         const formData = new FormData();
-        formData.append("files", files[i]);
+        formData.append("files", inputFiles[i]);
         formData.append("category", category);
 
         if (category === "bring-your-own") {
@@ -168,6 +223,8 @@ export default function Home() {
     setError(null);
     setProgress({ current: 0, total: 0 });
     setDriveSheetFile(null);
+    setSheetLink("");
+    setFetchingSheet(false);
   };
 
   const hasBYOPStep = category === "bring-your-own";
@@ -288,6 +345,31 @@ export default function Home() {
                 accept=".ipynb,.py,.zip,.xlsx,.xls"
                 label="Drop submission files or a Drive-links .xlsx"
               />
+
+              <div className="relative my-5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-white px-3 text-gray-400">
+                    or paste a Drive link to an xlsx / Google Sheet
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  value={sheetLink}
+                  onChange={(e) => setSheetLink(e.target.value)}
+                  placeholder="https://docs.google.com/spreadsheets/d/... or https://drive.google.com/file/d/..."
+                  className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-gray-800"
+                />
+                <p className="text-xs text-gray-400">
+                  Google Sheets are exported as .xlsx automatically (needs sign-in).
+                  Plain .xlsx Drive files work either signed in or via public sharing.
+                </p>
+              </div>
             </div>
 
             {error && (
@@ -310,10 +392,16 @@ export default function Home() {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={files.length === 0}
+              disabled={(files.length === 0 && !sheetLink.trim()) || fetchingSheet}
               className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
             >
-              Evaluate {files.length} Submission{files.length !== 1 ? "s" : ""}
+              {fetchingSheet
+                ? "Fetching sheet from Drive..."
+                : files.length > 0
+                  ? `Evaluate ${files.length} Submission${files.length !== 1 ? "s" : ""}`
+                  : sheetLink.trim()
+                    ? "Fetch & Evaluate Sheet"
+                    : "Evaluate"}
             </button>
           </div>
         )}

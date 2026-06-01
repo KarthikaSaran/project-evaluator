@@ -102,6 +102,97 @@ const SUPPORTED_EXTENSIONS = new Set([
 ]);
 
 const COLAB_MIME = "application/vnd.google.colaboratory";
+const GSHEET_MIME = "application/vnd.google-apps.spreadsheet";
+const XLSX_MIME =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+/**
+ * Fetch a spreadsheet for use as INPUT (the Drive-links sheet itself).
+ *
+ * Unlike fetchDriveFile (which is for individual submission files), this
+ * accepts Google Sheets — exporting them as .xlsx via the Drive API.
+ * Anything else (Docs, Slides, folders) is rejected.
+ */
+export async function fetchDriveSpreadsheet(
+  url: string,
+  accessToken?: string
+): Promise<DriveFetchResult> {
+  const parsed = parseDriveLink(url);
+
+  if (parsed.kind === "invalid") {
+    return { ok: false, error: "Invalid Drive URL", errorType: "invalid-url" };
+  }
+  if (parsed.kind === "folder") {
+    return {
+      ok: false,
+      error: "Folder link not supported - share a single sheet",
+      errorType: "folder",
+    };
+  }
+
+  if (parsed.kind === "google-doc") {
+    if (parsed.docType !== "spreadsheets") {
+      return {
+        ok: false,
+        error: "Only Google Sheets are supported as input, not Docs/Slides",
+        errorType: "google-doc",
+      };
+    }
+    if (!accessToken) {
+      return {
+        ok: false,
+        error:
+          "Sign in with Google to access Google Sheets links (anonymous access only works for .xlsx files set to 'Anyone with the link').",
+        errorType: "auth-required",
+      };
+    }
+    return exportGoogleSheetAsXlsx(parsed.id!, accessToken);
+  }
+
+  // Regular Drive file — reuse the normal file fetch path
+  return fetchDriveFile(url, accessToken);
+}
+
+async function exportGoogleSheetAsXlsx(
+  id: string,
+  accessToken: string
+): Promise<DriveFetchResult> {
+  // 1) Confirm access + grab the real filename
+  const metaUrl = `https://www.googleapis.com/drive/v3/files/${id}?fields=name,mimeType,trashed&supportsAllDrives=true`;
+  const metaResp = await fetch(metaUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!metaResp.ok) {
+    return mapDriveApiError(metaResp.status, await metaResp.text());
+  }
+  const meta = (await metaResp.json()) as DriveMetadata;
+  if (meta.trashed) {
+    return { ok: false, error: "Sheet is in trash", errorType: "no-access" };
+  }
+  if (meta.mimeType !== GSHEET_MIME) {
+    return {
+      ok: false,
+      error: `Expected a Google Sheet but got ${meta.mimeType}`,
+      errorType: "unsupported-type",
+    };
+  }
+
+  // 2) Export as xlsx
+  const exportUrl = `https://www.googleapis.com/drive/v3/files/${id}/export?mimeType=${encodeURIComponent(
+    XLSX_MIME
+  )}`;
+  const dlResp = await fetch(exportUrl, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!dlResp.ok) {
+    return mapDriveApiError(dlResp.status, await dlResp.text());
+  }
+
+  const buf = Buffer.from(await dlResp.arrayBuffer());
+  const filename = ensureExtension(meta.name || `sheet_${id}`, ".xlsx");
+
+  return { ok: true, data: buf, filename, mimeType: XLSX_MIME };
+}
 
 export async function fetchDriveFile(
   url: string,

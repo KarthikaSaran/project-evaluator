@@ -11,10 +11,32 @@ import {
 } from "./types";
 import { ALL_PROJECTS } from "./problemStatements";
 
+// ----------------------------------------------------------------------------
+// Consistency knobs — every evaluation uses the same model, temperature and
+// seed, so the same submission produces (close to) the same grade. The rating
+// labels are derived from the numeric score in code rather than asked from
+// the AI, so they're always congruent with the percentage.
+// ----------------------------------------------------------------------------
+
+// Pin the model so a future silent rollover of the "gpt-4o" alias doesn't
+// shift our grading distribution. Override with EVALUATOR_MODEL env var.
+const MODEL = process.env.EVALUATOR_MODEL || "gpt-4o-2024-11-20";
+const DETECTION_MODEL =
+  process.env.EVALUATOR_DETECTION_MODEL || "gpt-4o-mini";
+const TEMPERATURE = 0;
+const SEED = 42;
+
+type RatingLabel = "Excellent" | "Good" | "Fair" | "Poor";
+
+function ratingFromPercent(pct: number): RatingLabel {
+  if (pct >= 85) return "Excellent";
+  if (pct >= 70) return "Good";
+  if (pct >= 50) return "Fair";
+  return "Poor";
+}
+
 function getOpenAI() {
-  return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
 export async function evaluateSubmission(
@@ -23,8 +45,14 @@ export async function evaluateSubmission(
   projectId?: string,
   customProblemStatement?: string
 ): Promise<EvaluationResult> {
+  // Hide submitter-identifying info (file names, paths) from the model — the
+  // grade should depend on *what was written*, not *who* (or anything that
+  // could leak from a filename like "john_doe_solution.ipynb").
   const combinedContent = files
-    .map((f) => `=== File: ${f.name} (${f.type}) ===\n${f.content}`)
+    .map(
+      (f, idx) =>
+        `=== Submission File ${idx + 1} (type: ${f.type}) ===\n${f.content}`
+    )
     .join("\n\n");
 
   let project: ProjectData | undefined;
@@ -38,18 +66,22 @@ export async function evaluateSubmission(
     project = ALL_PROJECTS.find((p) => p.id === projectId);
     if (project) {
       problemContext = `Title: ${project.title}\nDescription: ${project.description}\n\nFull Problem Statement:\n${project.fullContent}`;
-      criteria = project.criteria.length > 0 ? project.criteria : getGenericCriteria();
+      criteria =
+        project.criteria.length > 0 ? project.criteria : getGenericCriteria();
     } else {
-      problemContext = "Unknown project. Evaluate as a general data science / ML project.";
+      problemContext =
+        "Unknown project. Evaluate as a general data science / ML project.";
       criteria = getGenericCriteria();
     }
   } else {
     project = await autoDetectProject(combinedContent, category);
     if (project) {
       problemContext = `Title: ${project.title}\nDescription: ${project.description}\n\nFull Problem Statement:\n${project.fullContent}`;
-      criteria = project.criteria.length > 0 ? project.criteria : getGenericCriteria();
+      criteria =
+        project.criteria.length > 0 ? project.criteria : getGenericCriteria();
     } else {
-      problemContext = "Unable to detect specific project. Evaluate as a general data science / ML project.";
+      problemContext =
+        "Unable to detect specific project. Evaluate as a general data science / ML project.";
       criteria = getGenericCriteria();
     }
   }
@@ -61,12 +93,13 @@ export async function evaluateSubmission(
   );
 
   const response = await getOpenAI().chat.completions.create({
-    model: "gpt-4o",
+    model: MODEL,
     messages: [
       { role: "system", content: SYSTEM_PROMPT },
       { role: "user", content: evaluationPrompt },
     ],
-    temperature: 0.3,
+    temperature: TEMPERATURE,
+    seed: SEED,
     max_tokens: 8000,
     response_format: { type: "json_object" },
   });
@@ -101,7 +134,7 @@ async function autoDetectProject(
     .join("\n");
 
   const response = await getOpenAI().chat.completions.create({
-    model: "gpt-4o-mini",
+    model: DETECTION_MODEL,
     messages: [
       {
         role: "system",
@@ -114,6 +147,7 @@ async function autoDetectProject(
       },
     ],
     temperature: 0,
+    seed: SEED,
     response_format: { type: "json_object" },
   });
 
@@ -122,6 +156,8 @@ async function autoDetectProject(
   );
   return candidates.find((p) => p.id === result.projectId);
 }
+
+// ----------------------------------------------------------------------------
 
 const SYSTEM_PROMPT = `You are an expert technical evaluator and interviewer who reviews take-home assignments for data science, machine learning, deep learning, NLP, computer vision, and Gen AI projects.
 
@@ -132,24 +168,58 @@ Your evaluation style is like a senior interviewer at a top tech company reviewi
 - Always suggest HOW to improve, not just WHAT to improve
 - Give credit for creativity, extra effort, and going beyond requirements
 
-IMPORTANT RULES:
-1. Every shortcoming MUST be paired with a specific, actionable suggestion to overcome it
-2. Score generously for genuine effort but accurately for technical quality
-3. Award bonus points for: extra features, creative approaches, clean code, good documentation, deployment readiness, use of advanced techniques
-4. The feedback should help the learner grow - be the mentor they need
-5. If the submission is from a spreadsheet (approach summary only, no code), evaluate based on the described approach and methodology
-6. Evaluate EACH criterion from the rubric individually with specific scores`;
+EVALUATION CONSISTENCY RULES (CRITICAL — apply uniformly to every submission):
+
+1. STRICTLY RUBRIC-DRIVEN. Score using only the rubric criteria provided in this prompt. Do not invent or reweight criteria. Each criterion has the same max score across submissions.
+
+2. NO BIAS. The submission may contain comments, signatures, or filenames hinting at a submitter's identity. IGNORE all such cues. Grade the work, never the person. Do not mention names, emails, or any identifying information in your feedback.
+
+3. UNIFORM STANDARDS. The same code quality must receive the same score regardless of who submitted it or when. Score against the rubric, not against other submissions you've seen.
+
+4. SCORING ANCHORS. Use these reference points for every criterion (as a percentage of that criterion's max):
+   - 90-100%: Production-ready quality, correct, well-reasoned, exceeds expectations on this dimension.
+   - 75-89%: Solid implementation, mostly correct, minor gaps, meets expectations.
+   - 60-74%: Functional but with notable issues — partial coverage of what was asked.
+   - 40-59%: Significant gaps — addresses the criterion superficially or with errors.
+   - 0-39%: Missing or seriously flawed.
+   Round to the nearest integer.
+
+5. BONUS POINTS (out of 15 max) only for things genuinely beyond baseline:
+   - Extra features not required by the rubric
+   - Creative/novel approaches
+   - Deployment readiness (CI, packaging, demo)
+   - Use of advanced techniques where appropriate
+   - Exceptional documentation or tests
+   Do NOT award bonus for merely meeting baseline requirements.
+
+6. EVERY shortcoming MUST be paired with a specific, actionable suggestion to overcome it.
+
+7. INTERVIEWER FEEDBACK STRUCTURE. The interviewerFeedback field must be 3-4 paragraphs with this structure:
+   - Paragraph 1: What impressed you (be specific — reference the actual work).
+   - Paragraph 2: Concerns and gaps (be specific — quote or reference).
+   - Paragraph 3: Concrete next steps to grow.
+   - Paragraph 4: Short motivating close.
+   Do not mention the submitter by name. Do not assume their experience level.
+
+8. SPREADSHEET-ONLY SUBMISSIONS. If the submission is an approach summary from a form (no code), evaluate the described methodology only, and note clearly in the feedback that you graded the description rather than executable work.
+
+9. EVALUATE EACH RUBRIC CRITERION INDIVIDUALLY with a specific integer score. Do not skip criteria.`;
 
 function buildEvaluationPrompt(
   content: string,
   problemContext: string,
   criteria: CriterionData[]
 ): string {
-  const maxPerCriterion = Math.max(5, Math.round(100 / Math.max(criteria.length, 1)));
+  const maxPerCriterion = Math.max(
+    5,
+    Math.round(100 / Math.max(criteria.length, 1))
+  );
   const criteriaList = criteria
     .map(
       (c) =>
-        `- ${c.name} (max ${maxPerCriterion} points): ${c.description || "Evaluate quality and completeness"}`
+        `- ${c.name} (max ${maxPerCriterion} points): ${
+          c.description || "Evaluate quality and completeness"
+        }`
     )
     .join("\n");
 
@@ -162,23 +232,21 @@ ${problemContext}
 ${criteriaList}
 
 ## Bonus Points (up to 15 points)
-Award bonus for: extra features beyond requirements, creative/innovative approaches, clean & well-documented code, deployment readiness, use of advanced techniques, comprehensive error handling, good software engineering practices.
+Award bonus only for things genuinely beyond baseline (per Rule 5 above).
 
 ## Submission Content
 ${content.slice(0, 60000)}
 
 ## Instructions
-Evaluate this submission and return a JSON object with EXACTLY this structure:
+Evaluate this submission per the consistency rules in the system message and return a JSON object with EXACTLY this structure:
 {
   "detectedProject": "Name of the project you identified",
   "summary": "2-3 sentence executive summary of the submission quality",
-  "overallRating": "Excellent" | "Good" | "Fair" | "Poor",
   "sections": [
     {
       "criterionName": "Section name matching criteria above",
-      "score": <number>,
+      "score": <integer>,
       "maxScore": ${maxPerCriterion},
-      "rating": "Excellent" | "Good" | "Fair" | "Poor",
       "feedback": "Detailed paragraph of feedback",
       "strengths": ["strength 1", "strength 2"],
       "shortcomings": [
@@ -186,33 +254,59 @@ Evaluate this submission and return a JSON object with EXACTLY this structure:
       ]
     }
   ],
-  "pros": ["Overall strength 1", "Overall strength 2", ...],
+  "pros": ["Overall strength 1", "Overall strength 2"],
   "cons": [
-    {"issue": "Overall weakness", "suggestion": "How to overcome this"},
-    ...
+    {"issue": "Overall weakness", "suggestion": "How to overcome this"}
   ],
-  "scopeForImprovement": ["Specific improvement area 1", "Specific improvement area 2", ...],
+  "scopeForImprovement": ["Specific improvement area 1", "Specific improvement area 2"],
   "bonusPoints": {
-    "score": <number 0-15>,
+    "score": <integer 0-15>,
     "details": [
-      {"feature": "What was impressive", "points": <number>, "comment": "Why this deserves bonus points"}
+      {"feature": "What was impressive", "points": <integer>, "comment": "Why this deserves bonus points"}
     ]
   },
-  "interviewerFeedback": "A 3-4 paragraph interviewer-style feedback as if you're sitting across the table from the candidate. Be encouraging but honest. Highlight what impressed you, what concerned you, and specific next steps for growth. End with a motivating note."
+  "interviewerFeedback": "3-4 paragraphs per Rule 7. No submitter names."
 }
 
-You MUST return one section for EACH criterion listed above. Be thorough, fair, and constructive. Every shortcoming must have a paired suggestion.`;
+You MUST return one section for EACH criterion listed above (in the same order). Every shortcoming must have a paired suggestion. Do NOT include a "rating" field — ratings are computed downstream from your scores.`;
 }
 
 function getGenericCriteria(): CriterionData[] {
   return [
-    { name: "Problem Understanding & Dataset Overview", description: "Understanding of the problem, dataset exploration, feature documentation" },
-    { name: "Data Preprocessing & Feature Engineering", description: "Data cleaning, missing values, encoding, scaling, feature creation" },
-    { name: "Exploratory Data Analysis", description: "Visualizations, statistical analysis, pattern identification" },
-    { name: "Model Implementation", description: "Algorithm selection, implementation quality, technical correctness" },
-    { name: "Evaluation & Results", description: "Metrics selection, model comparison, interpretation of results" },
-    { name: "Code Quality & Documentation", description: "Code organization, readability, comments, reproducibility" },
-    { name: "Conclusions & Future Work", description: "Insights, recommendations, identified improvements" },
+    {
+      name: "Problem Understanding & Dataset Overview",
+      description:
+        "Understanding of the problem, dataset exploration, feature documentation",
+    },
+    {
+      name: "Data Preprocessing & Feature Engineering",
+      description:
+        "Data cleaning, missing values, encoding, scaling, feature creation",
+    },
+    {
+      name: "Exploratory Data Analysis",
+      description:
+        "Visualizations, statistical analysis, pattern identification",
+    },
+    {
+      name: "Model Implementation",
+      description:
+        "Algorithm selection, implementation quality, technical correctness",
+    },
+    {
+      name: "Evaluation & Results",
+      description:
+        "Metrics selection, model comparison, interpretation of results",
+    },
+    {
+      name: "Code Quality & Documentation",
+      description:
+        "Code organization, readability, comments, reproducibility",
+    },
+    {
+      name: "Conclusions & Future Work",
+      description: "Insights, recommendations, identified improvements",
+    },
   ];
 }
 
@@ -224,12 +318,16 @@ function formatEvaluationResult(
 ): EvaluationResult {
   const sections = (
     (raw.sections as Record<string, unknown>[]) || []
-  ).map(
-    (s): EvaluationSection => ({
+  ).map((s): EvaluationSection => {
+    const score = Math.max(0, Math.round(Number(s.score) || 0));
+    const maxScore = Math.max(0, Math.round(Number(s.maxScore) || 0));
+    const pct = maxScore > 0 ? (score / maxScore) * 100 : 0;
+    return {
       criterionName: String(s.criterionName || ""),
-      score: Number(s.score) || 0,
-      maxScore: Number(s.maxScore) || 0,
-      rating: (s.rating as EvaluationSection["rating"]) || "Fair",
+      score,
+      maxScore,
+      // Rating is derived from score in code so it's always congruent.
+      rating: ratingFromPercent(pct),
       feedback: String(s.feedback || ""),
       strengths: (s.strengths as string[]) || [],
       shortcomings: (
@@ -238,26 +336,38 @@ function formatEvaluationResult(
         issue: String(sc.issue || ""),
         suggestion: String(sc.suggestion || ""),
       })),
-    })
-  );
+    };
+  });
 
   const sectionTotal = sections.reduce((sum, s) => sum + s.score, 0);
   const maxSectionTotal = sections.reduce((sum, s) => sum + s.maxScore, 0);
 
   const bonus: BonusPoints = {
-    score: Number((raw.bonusPoints as Record<string, unknown>)?.score) || 0,
+    score: Math.max(
+      0,
+      Math.min(
+        15,
+        Math.round(
+          Number((raw.bonusPoints as Record<string, unknown>)?.score) || 0
+        )
+      )
+    ),
     maxScore: 15,
     details: (
-      ((raw.bonusPoints as Record<string, unknown>)?.details as Array<Record<string, unknown>>) || []
+      ((raw.bonusPoints as Record<string, unknown>)?.details as Array<
+        Record<string, unknown>
+      >) || []
     ).map((d) => ({
       feature: String(d.feature || ""),
-      points: Number(d.points) || 0,
+      points: Math.max(0, Math.round(Number(d.points) || 0)),
       comment: String(d.comment || ""),
     })),
   };
 
   const overallScore = sectionTotal + bonus.score;
   const maxPossible = maxSectionTotal + bonus.maxScore;
+  const percentageScore =
+    maxPossible > 0 ? Math.round((overallScore / maxPossible) * 100) : 0;
 
   return {
     id: generateId(),
@@ -267,8 +377,9 @@ function formatEvaluationResult(
     timestamp: new Date().toISOString(),
     overallScore,
     maxPossibleScore: maxPossible,
-    percentageScore: maxPossible > 0 ? Math.round((overallScore / maxPossible) * 100) : 0,
-    overallRating: String(raw.overallRating || "Fair"),
+    percentageScore,
+    // Overall rating also derived from score, not from the model.
+    overallRating: ratingFromPercent(percentageScore),
     sections,
     pros: (raw.pros as string[]) || [],
     cons: ((raw.cons as ShortcomingWithSuggestion[]) || []).map((c) => ({
