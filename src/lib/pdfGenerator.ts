@@ -50,9 +50,12 @@ export async function generatePDFReport(
   result: EvaluationResult
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
+    // Bigger bottom margin so the footer text lives INSIDE the usable area —
+    // writing past the bottom margin makes PDFKit's text() auto-paginate,
+    // which was creating one phantom blank page per footer call.
     const doc = new PDFDocument({
       size: "A4",
-      margins: { top: 35, bottom: 35, left: 40, right: 40 },
+      margins: { top: 35, bottom: 50, left: 40, right: 40 },
       bufferPages: true,
       info: {
         Title: `Evaluation Report - ${result.submissionName}`,
@@ -79,7 +82,9 @@ export async function generatePDFReport(
     doc.addPage();
     renderPage3(doc, result, pageWidth);
 
-    // Footer page numbers
+    // Footer page numbers. CRITICAL: y must be inside the usable area
+    // (page.height - bottomMargin) and lineBreak:false prevents PDFKit
+    // from auto-paginating, which was the phantom-page bug.
     const totalPages = doc.bufferedPageRange().count;
     for (let i = 0; i < totalPages; i++) {
       doc.switchToPage(i);
@@ -89,10 +94,15 @@ export async function generatePDFReport(
         .text(
           `Page ${i + 1} of ${totalPages}`,
           40,
-          doc.page.height - 22,
-          { align: "center", width: pageWidth }
+          doc.page.height - 38,
+          {
+            align: "center",
+            width: pageWidth,
+            lineBreak: false,
+          }
         );
     }
+    doc.flushPages();
 
     doc.end();
   });

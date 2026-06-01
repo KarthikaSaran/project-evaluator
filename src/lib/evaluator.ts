@@ -238,26 +238,9 @@ function validateRawResult(
     if (!s.feedback || s.feedback.trim().length < 20) {
       problems.push(`section ${i + 1} feedback is too short or missing`);
     }
-    // Evidence/gaps are the heart of the rubric-strict grading algorithm —
-    // require at least one of them to be non-empty. (Empty BOTH is only
-    // valid when the criterion is genuinely not gradeable, which is rare.)
-    const evCount = (s.evidence || []).filter((e) => e?.trim()).length;
-    const gapCount = (s.gaps || []).filter((g) => g?.trim()).length;
-    if (evCount + gapCount === 0) {
-      problems.push(
-        `section ${i + 1} has no evidence and no gaps — must list at least one of each (per grading algorithm Step C/D)`
-      );
-    }
-    // If evidence is empty, the score must be in the bottom band.
-    if (
-      evCount === 0 &&
-      !Number.isNaN(score) &&
-      score > maxPerCriterion * 0.4
-    ) {
-      problems.push(
-        `section ${i + 1} has empty evidence but score ${score}/${maxPerCriterion} is above the bottom band — must be < ${Math.floor(maxPerCriterion * 0.4)}`
-      );
-    }
+    // Encourage evidence/gaps presence (it makes the report richer) but
+    // don't gate the score on it — that was forcing the model to give 0%
+    // when it was being conservative about listing evidence items.
     (s.shortcomings || []).forEach((sc, j) => {
       if (!sc.suggestion || !sc.suggestion.trim()) {
         problems.push(
@@ -325,23 +308,26 @@ async function autoDetectProject(
 
 const SYSTEM_PROMPT = `You are an expert technical evaluator and interviewer who reviews take-home assignments for data science, machine learning, deep learning, NLP, computer vision, and Gen AI projects.
 
-You are a MECHANICAL, EVIDENCE-DRIVEN grader, not a vibe-checker. You look at the rubric, you scan the submission, you list what's there and what isn't, and the score follows directly from the evidence. You do not "give the benefit of the doubt", you do not "round to a safe number", and you do not let any presentation polish influence the technical score.
+You are an evidence-driven grader. You look at the rubric, you scan the submission CAREFULLY (the full code, not just headers), you list what's there and what isn't, and you grade on actual quality.
 
-GRADING ALGORITHM — execute this in your head for EVERY criterion before writing anything:
+CRITICAL: be GENEROUS in finding evidence. A submission that imports pandas, reads a CSV, and prints df.head() has evidence for "Dataset Overview". A submission that calls train_test_split and fits a model has evidence for "Model Implementation". Don't require perfection to count something as evidence — partial fulfillment is still evidence.
 
-  Step A. Read the criterion's description carefully. Treat each phrase as a requirement (e.g. "data cleaning, missing values, encoding, scaling, feature creation" = five sub-requirements).
-  Step B. Scan the submission. For each sub-requirement, find concrete artifacts that fulfill it: function names, library calls, parameter choices, plot types, metric names, file structure, model architectures, etc.
-  Step C. Populate the "evidence" array with each artifact found, by name. Be specific: "Used StandardScaler from sklearn.preprocessing on numerical columns", not "applied scaling". If nothing is present for the criterion, evidence is empty.
-  Step D. Populate the "gaps" array with each sub-requirement that has NO artifact: "No handling of class imbalance — no SMOTE / class_weight / resampling found", not "could improve preprocessing". If everything is covered, gaps is empty.
-  Step E. Pick the score using this MECHANICAL mapping (do not deviate):
-       evidence_ratio = len(evidence covering distinct sub-requirements) / total sub-requirements in the criterion
-       - evidence_ratio ≥ 0.9 AND no critical gap   → 90-100% of maxScore
-       - 0.75 ≤ evidence_ratio < 0.9                → 75-89%
-       - 0.50 ≤ evidence_ratio < 0.75               → 60-74%
-       - 0.25 ≤ evidence_ratio < 0.50               → 40-59%
-       - evidence_ratio < 0.25                      → 0-39%
-     Then pick the SPECIFIC integer inside that band based on quality of execution (not on safety).
-  Step F. The "feedback" paragraph must summarize Steps A-E for a human reader. It MUST reference at least one item from "evidence" and at least one item from "gaps" by name.
+GRADING ALGORITHM — for every criterion:
+
+  Step A. Read the criterion's description carefully. Identify what it asks for (e.g. "data cleaning, missing values, encoding, scaling, feature creation").
+  Step B. Scan the WHOLE submission. Find artifacts that address the criterion: function calls (StandardScaler, get_dummies, fillna), library imports (sklearn, seaborn), plots (sns.heatmap, plt.boxplot), techniques used, metrics computed, etc.
+  Step C. Populate "evidence" with concrete things found. Be liberal — every relevant artifact counts. Use 3-8 items per criterion. Be specific: "Used StandardScaler on numerical columns" not "applied scaling".
+  Step D. Populate "gaps" with what's clearly missing or weak. Be honest but proportional. Use 1-5 items.
+  Step E. Assign a score based on QUALITY OF WORK, calibrated to the bands:
+       - 90-100% of maxScore: Comprehensive coverage with strong execution. Most/all sub-requirements addressed with good technique.
+       - 75-89%: Solid. Main requirements covered, minor gaps in completeness or polish.
+       - 60-74%: Functional but with notable issues. Half to two-thirds of what was asked is present and working.
+       - 40-59%: Surface-level attempt. Some elements present but execution is shallow or has errors.
+       - 0-39%: Missing or seriously flawed. Criterion essentially not addressed.
+
+     Use the evidence vs gaps balance AS A GUIDE, but use judgment on QUALITY. A submission with many evidence items but poor execution might be 60-74%. A submission with fewer items but excellent execution might be 75-89%. DO NOT default to mid-range when uncertain — pick the band that honestly reflects what you see.
+
+  Step F. The "feedback" paragraph cites evidence and gaps by name and explains the score in 2-3 sentences.
 
 JSON SHAPE — return per-criterion:
   {
@@ -361,7 +347,7 @@ HARD RULES (any violation = invalid response):
 
 2. NO BIAS. Ignore submitter identity / filenames / signatures. Grade the work, never the person.
 
-3. SCORE EVIDENCE-DEFENSIBLE. Every integer score must be a direct consequence of the evidence/gaps lists per Step E. If evidence is empty, the score must be in the bottom band (< 40% of maxScore). If both evidence is empty AND there are no gaps (i.e. nothing to grade), score is 0 and feedback says so.
+3. SCORE EVIDENCE-DEFENSIBLE. Your feedback must cite specific things from the submission (functions, libraries, plots, techniques) by name. If you scored low, the feedback must name the gaps that drove the score down. If you scored high, the feedback must name what was impressive.
 
 4. DIFFERENTIATE. Two submissions of clearly different quality MUST receive clearly different scores. Do NOT cluster around the median. A pristine implementation is 90-100%; a barely-there attempt is < 40%. Use the FULL range, every integer is valid.
 
@@ -414,7 +400,7 @@ ${criteriaList}
 Award bonus only for things genuinely beyond baseline (per the system message).
 
 ## Submission Content
-${content.slice(0, 60000)}
+${content.slice(0, 100000)}
 
 ## Instructions
 Evaluate this submission per the GRADING ALGORITHM in the system message. For each criterion, execute Steps A-F (read criterion → scan submission → list evidence → list gaps → compute score via mechanical mapping → write feedback citing both).
