@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Project Evaluator
 
-## Getting Started
+AI-powered project submission evaluator that generates detailed PDF reports with scores, feedback, and actionable improvement suggestions.
 
-First, run the development server:
+**Live:** [project-evaluator-gold.vercel.app](https://project-evaluator-gold.vercel.app)
+
+## Features
+
+- **6 Project Categories**: ML Mini Project, DL Mini Project, Case Study 1, Case Study 2, Capstone, Bring Your Own Project
+- **Multiple Input Formats**: Upload `.ipynb`, `.py`, `.zip` files individually or `.xlsx` spreadsheets for bulk evaluation
+- **Auto-Detection**: AI identifies the project type from submission content
+- **Detailed PDF Reports**: Professional reports with section-by-section scores, pros/cons, improvement suggestions, and interviewer-style feedback
+- **Bonus Scoring**: Extra points for creativity, advanced techniques, clean code, and going beyond requirements
+- **Pre-loaded Problem Statements**: Lending Club Loan Approval (ML) and IMDB CineBot (NLP/Chatbot)
+- **Custom Projects**: "Bring Your Own Project" mode with problem statement upload
+
+## How It Works
+
+1. **Select Category** - Choose the project type being evaluated
+2. **Upload Submissions** - Drag and drop code files or bulk spreadsheets
+3. **AI Evaluation** - OpenAI GPT-4o analyzes code quality, methodology, and completeness
+4. **Download Reports** - Get professional PDF reports for each submission
+
+## Report Contents
+
+Each PDF report includes:
+- Overall score and rating
+- Section-by-section evaluation with scores
+- Strengths and areas for growth
+- Every shortcoming paired with an actionable suggestion
+- Scope for improvement
+- Bonus points for creativity and extra features
+- Interviewer-style feedback (as if reviewing a take-home assignment)
+
+## Setup
 
 ```bash
+npm install
+cp .env.example .env.local
+# Add your OpenAI API key to .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Description |
+|----------|-------------|
+| `OPENAI_API_KEY` | Your OpenAI API key (required) |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tech Stack
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Frontend**: Next.js 16, React, TypeScript, Tailwind CSS
+- **AI**: OpenAI GPT-4o
+- **PDF**: PDFKit
+- **File Parsing**: XLSX (SheetJS), JSZip
+- **Deployment**: Vercel
