@@ -96,6 +96,25 @@ export default function DriveSheetMode({
     }
   }, [initialFile]);
 
+  // Independent auth-status fetch so the Email button state never relies on
+  // an upstream UI piece being mounted/visible. Refreshed on mount and after
+  // operations that might consume the session.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth/google/status", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data: AuthStatus) => {
+        if (!cancelled) setAuthStatus(data);
+      })
+      .catch(() => {
+        if (!cancelled)
+          setAuthStatus({ signedIn: false, configured: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // ---------------------------------------------------------------- parsing
   const doParse = async (file: File) => {
     setError(null);
@@ -834,6 +853,7 @@ export default function DriveSheetMode({
                       const sendable = rowProgress.filter(
                         (r) => r.state === "success" && r.email
                       ).length;
+                      const noEmailColumn = !parsed.columns.emailCol;
                       return (
                         <button
                           type="button"
@@ -841,16 +861,20 @@ export default function DriveSheetMode({
                           disabled={
                             emailSending ||
                             emailingDone ||
-                            sendable === 0 ||
+                            successCount === 0 ||
                             !authStatus?.signedIn
                           }
                           className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           title={
                             !authStatus?.signedIn
                               ? "Sign in with Google first"
-                              : sendable === 0
-                                ? "No rows have an email address to send to"
-                                : "Email PDF reports to submitters via Gmail"
+                              : successCount === 0
+                                ? "No successful evaluations to email"
+                                : sendable === 0
+                                  ? noEmailColumn
+                                    ? "No email column was detected in the sheet — clicking will mark rows as 'No email in row'"
+                                    : "No rows in the sheet had a value in the email column"
+                                  : "Email PDF reports to submitters via Gmail"
                           }
                         >
                           <EmailIcon />
@@ -858,11 +882,31 @@ export default function DriveSheetMode({
                             ? "Sending..."
                             : emailingDone
                               ? `Emails sent (${emailedCount})`
-                              : `Email Reports (${sendable})`}
+                              : sendable > 0
+                                ? `Email Reports (${sendable})`
+                                : "Email Reports"}
                         </button>
                       );
                     })()}
                   </div>
+
+                  {/* Explain why the email button can't usefully do anything,
+                      so the user can fix their sheet or sign in. */}
+                  {successCount > 0 &&
+                    rowProgress.filter(
+                      (r) => r.state === "success" && r.email
+                    ).length === 0 && (
+                      <p className="text-xs text-amber-700 mt-1">
+                        {!parsed.columns.emailCol
+                          ? `No email column was detected in your sheet (header didn't match "Email" / "E-mail" / "Email Address" / etc.). Add or rename a column so the app can pick it up, then re-run.`
+                          : `The detected email column "${parsed.columns.emailCol}" has no values for the evaluated rows.`}
+                      </p>
+                    )}
+                  {!authStatus?.signedIn && (
+                    <p className="text-xs text-amber-700 mt-1">
+                      Sign in with Google (top right) to enable sending.
+                    </p>
+                  )}
                 </div>
 
                 <RowList

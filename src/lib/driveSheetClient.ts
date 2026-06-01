@@ -122,22 +122,32 @@ export function parseDriveSheet(buffer: ArrayBuffer): ParsedDriveSheet {
   }
 
   // --- Detect email column (separately, even when identifier is "Name") -----
-  // Prefer columns whose header looks email-y; fall back to a column whose
-  // cells look like email addresses.
+  // Header match first (covers "Email", "E-mail", "Email Address", "Email ID",
+  // "Student Email", "Submitter Email", "Mail", "E Mail", "E_Mail", ...).
+  // Then a value-based fallback that picks the column with the most
+  // email-shaped cells, regardless of header name.
   let emailCol =
-    headers.find((h) => /e-?mail|^mail$/i.test(h)) || null;
+    headers.find((h) =>
+      /\be[\s_\-]?mail\b|\bmail\s*(id|address)?\b|^mail$/i.test(h.trim())
+    ) || null;
   if (!emailCol) {
-    const sampleSize = Math.min(10, rowData.length);
+    const sampleSize = Math.min(20, rowData.length);
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    let bestCol = "";
+    let bestHits = 0;
     for (const h of headers) {
       const hits = rowData
         .slice(0, sampleSize)
-        .filter((r) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(r[h] || "").trim()))
+        .filter((r) => emailRe.test(String(r[h] || "").trim()))
         .length;
-      if (hits >= Math.max(1, Math.floor(sampleSize / 2))) {
-        emailCol = h;
-        break;
+      if (hits > bestHits) {
+        bestHits = hits;
+        bestCol = h;
       }
     }
+    // Even a single email-shaped cell in a column is enough — better to
+    // false-positive a notes column than to fail to find a real one.
+    if (bestHits >= 1) emailCol = bestCol;
   }
 
   // --- Detect identifier column (for display + filename fallback) ----------
