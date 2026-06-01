@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import JSZip from "jszip";
 import FileUpload from "./FileUpload";
 import GoogleSignIn, { AuthStatus } from "./GoogleSignIn";
 import { ProjectCategory, EvaluationResult } from "@/lib/types";
@@ -72,7 +71,6 @@ export default function DriveSheetMode({
   const [results, setResults] = useState<EvaluationResult[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [updatedXlsxBlob, setUpdatedXlsxBlob] = useState<Blob | null>(null);
-  const [zipBlob, setZipBlob] = useState<Blob | null>(null);
   const [building, setBuilding] = useState(false);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
 
@@ -307,40 +305,9 @@ export default function DriveSheetMode({
         );
       }
 
-      // ZIP of PDFs is still useful even when uploading to Drive (offline backup).
-      if (finalResults.length > 0) {
-        const zip = new JSZip();
-        for (const result of finalResults) {
-          try {
-            const pdfResp = await fetch("/api/generate-report", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ result }),
-            });
-            if (!pdfResp.ok) continue;
-            const pdfBuf = await pdfResp.arrayBuffer();
-            // submissionName is now email when available; fall back to
-            // identifier match for rows without an email.
-            const rp = finalRowProgress.find(
-              (r) =>
-                (r.email && r.email === result.submissionName) ||
-                r.identifier === result.submissionName
-            );
-            const baseName = reportFilenameBase(
-              rp?.email || null,
-              result.submissionName,
-              rp?.rowIndex ?? 0
-            );
-            zip.file(`${baseName}.pdf`, pdfBuf);
-          } catch {
-            // skip individual failures
-          }
-        }
-        const zipBuf = await zip.generateAsync({ type: "blob" });
-        setZipBlob(zipBuf);
-      } else {
-        setZipBlob(null);
-      }
+      // PDF ZIP no longer built — every PDF is already uploaded to the
+      // user's Drive folder during the eval loop, so an offline ZIP would
+      // just duplicate that. Drops both the build time and the memory cost.
     } finally {
       setBuilding(false);
     }
@@ -493,15 +460,6 @@ export default function DriveSheetMode({
     URL.revokeObjectURL(url);
   };
 
-  const handleDownloadZip = () => {
-    if (zipBlob) {
-      triggerDownload(
-        zipBlob,
-        `Evaluation_Reports_${new Date().toISOString().slice(0, 10)}.zip`
-      );
-    }
-  };
-
   const handleDownloadXlsx = () => {
     if (updatedXlsxBlob) {
       const base = files[0]?.name.replace(/\.xlsx?$/i, "") || "submissions";
@@ -517,7 +475,6 @@ export default function DriveSheetMode({
     setResults([]);
     setError(null);
     setUpdatedXlsxBlob(null);
-    setZipBlob(null);
     setFolderUrl("");
     setEmailSending(false);
     setEmailingDone(false);
@@ -822,105 +779,84 @@ export default function DriveSheetMode({
                   </div>
                 )}
 
-                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-3">
-                  <h3 className="font-semibold text-gray-800">Actions</h3>
-                  {building && (
-                    <p className="text-xs text-gray-500">Building bundle...</p>
-                  )}
-                  <div className="flex flex-wrap gap-3">
+                {/* PDFs are auto-uploaded to the Drive folder — no need for
+                    a ZIP. Only show the xlsx download for non-Google-Sheet
+                    inputs (Google Sheet inputs are updated in place). */}
+                {!isGoogleSheetSource && (
+                  <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
                     <button
                       type="button"
-                      onClick={handleDownloadZip}
-                      disabled={!zipBlob || building}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                      onClick={handleDownloadXlsx}
+                      disabled={!updatedXlsxBlob || building}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
                     >
                       <DownloadIcon />
-                      Download PDFs (ZIP) — {successCount} report
-                      {successCount !== 1 ? "s" : ""}
+                      Download Updated Sheet (.xlsx)
                     </button>
-                    {!isGoogleSheetSource && (
-                      <button
-                        type="button"
-                        onClick={handleDownloadXlsx}
-                        disabled={!updatedXlsxBlob || building}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-                      >
-                        <DownloadIcon />
-                        Download Updated Sheet (.xlsx)
-                      </button>
-                    )}
-                    {(() => {
-                      const sendable = rowProgress.filter(
-                        (r) => r.state === "success" && r.email
-                      ).length;
-                      const noEmailColumn = !parsed.columns.emailCol;
-                      return (
-                        <button
-                          type="button"
-                          onClick={handleSendEmails}
-                          disabled={
-                            emailSending ||
-                            emailingDone ||
-                            successCount === 0 ||
-                            !authStatus?.signedIn
-                          }
-                          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          title={
-                            !authStatus?.signedIn
-                              ? "Sign in with Google first"
-                              : successCount === 0
-                                ? "No successful evaluations to email"
-                                : sendable === 0
-                                  ? noEmailColumn
-                                    ? "No email column was detected in the sheet — clicking will mark rows as 'No email in row'"
-                                    : "No rows in the sheet had a value in the email column"
-                                  : "Email PDF reports to submitters via Gmail"
-                          }
-                        >
-                          <EmailIcon />
-                          {emailSending
-                            ? "Sending..."
-                            : emailingDone
-                              ? `Emails sent (${emailedCount})`
-                              : sendable > 0
-                                ? `Email Reports (${sendable})`
-                                : "Email Reports"}
-                        </button>
-                      );
-                    })()}
                   </div>
-
-                  {/* Explain why the email button can't usefully do anything,
-                      so the user can fix their sheet or sign in. */}
-                  {successCount > 0 &&
-                    rowProgress.filter(
-                      (r) => r.state === "success" && r.email
-                    ).length === 0 && (
-                      <p className="text-xs text-amber-700 mt-1">
-                        {!parsed.columns.emailCol
-                          ? `No email column was detected in your sheet (header didn't match "Email" / "E-mail" / "Email Address" / etc.). Add or rename a column so the app can pick it up, then re-run.`
-                          : `The detected email column "${parsed.columns.emailCol}" has no values for the evaluated rows.`}
-                      </p>
-                    )}
-                  {!authStatus?.signedIn && (
-                    <p className="text-xs text-amber-700 mt-1">
-                      Sign in with Google (top right) to enable sending.
-                    </p>
-                  )}
-                </div>
+                )}
 
                 <RowList
                   rows={rowProgress}
                   emailEnabled={emailSending || emailingDone}
                 />
 
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="w-full py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50"
-                >
-                  Start a New Sheet
-                </button>
+                {/* Prominent Send Email Reports panel — replaces both the old
+                    Actions row's email button and the "Start a New Sheet"
+                    reset button. The red note enforces a manual verification
+                    step before anything customer-facing goes out. */}
+                {(() => {
+                  const sendable = rowProgress.filter(
+                    (r) => r.state === "success" && r.email
+                  ).length;
+                  const noEmailColumn = !parsed.columns.emailCol;
+                  return (
+                    <div className="bg-white rounded-2xl border-2 border-indigo-200 p-6 shadow-sm space-y-3">
+                      <button
+                        type="button"
+                        onClick={handleSendEmails}
+                        disabled={
+                          emailSending ||
+                          emailingDone ||
+                          successCount === 0 ||
+                          !authStatus?.signedIn
+                        }
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-100"
+                      >
+                        <EmailIcon />
+                        {emailSending
+                          ? "Sending..."
+                          : emailingDone
+                            ? `Emails sent (${emailedCount})`
+                            : sendable > 0
+                              ? `Send Email Reports (${sendable})`
+                              : "Send Email Reports"}
+                      </button>
+
+                      <div className="bg-red-50 border border-red-300 rounded-lg px-4 py-3">
+                        <p className="text-sm text-red-700 font-medium">
+                          ⚠ Please verify all the report PDFs in your Drive
+                          folder before sending the emails. Once sent, the
+                          messages go out from your Google account to the
+                          submitters and cannot be recalled.
+                        </p>
+                      </div>
+
+                      {successCount > 0 && sendable === 0 && (
+                        <p className="text-xs text-amber-700">
+                          {noEmailColumn
+                            ? `No email column was detected in your sheet (header didn't match "Email" / "E-mail" / "Email Address" / etc.). Add or rename a column so the app can pick it up, then re-run.`
+                            : `The detected email column "${parsed.columns.emailCol}" has no values for the evaluated rows.`}
+                        </p>
+                      )}
+                      {!authStatus?.signedIn && (
+                        <p className="text-xs text-amber-700">
+                          Sign in with Google (top right) to enable sending.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
               </>
             )}
           </div>

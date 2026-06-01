@@ -46,6 +46,10 @@ export interface EvaluationSection {
   feedback: string;
   strengths: string[];
   shortcomings: ShortcomingWithSuggestion[];
+  /** Specific concrete things found in the submission that fulfill this criterion. */
+  evidence?: string[];
+  /** Specific concrete things missing from the submission per this criterion. */
+  gaps?: string[];
 }
 
 export interface ShortcomingWithSuggestion {
