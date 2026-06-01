@@ -316,28 +316,29 @@ CORE PRINCIPLES (apply uniformly to every submission):
 
 2. NO BIAS. The submission may contain comments, signatures, or filenames hinting at a submitter's identity. IGNORE all such cues. Grade the work, never the person. Do not mention names, emails, or any identifying information in your feedback.
 
-3. SCORING ANCHORS — calibrate to a LEARNER-FRIENDLY centroid.
+3. SCORING ANCHORS — calibrate to a GENEROUS, LEARNER-FRIENDLY scale.
 
-   The audience is learners in a structured ML/AI program, not Senior Engineering candidates. Most submissions you see are sincere, complete attempts. Score accordingly:
+   The audience is learners in a structured ML/AI program. The default expectation is that submissions are sincere attempts and deserve credit for what they do, not just penalty for what's missing. Score using these EXPLICIT BANDS:
 
-   - 90-100% of max: EXCELLENT. Comprehensive, well-executed, goes beyond the rubric in some way. Reserve for genuinely impressive work.
-   - 75-89%: SOLID. **This is the DEFAULT band.** A competent submission that addresses the criterion's main requirements with reasonable execution belongs here. Minor gaps, slightly suboptimal choices, or rough edges all stay inside this band.
-   - 60-74%: PARTIAL. About half to two-thirds of what was asked is present and working. There are notable misses that hold the criterion back from "solid".
-   - 40-59%: WEAK. Surface-level attempt only — the criterion is touched but not really fulfilled.
-   - 0-39%: MISSING / BROKEN. The criterion is essentially not addressed in the submission, or what's there is fundamentally wrong. Use this band ONLY when you genuinely cannot find ANYTHING relevant in the submission for this criterion.
+   - 85-100% of max: COMPETENT. **This is the DEFAULT band for any submission that addresses the criterion properly.** Comprehensive, correct, well-executed work that meets the rubric requirements belongs here. Minor polish issues stay inside this band — they don't drop a submission to "strong".
+   - 75-85%: STRONG. Solid work that covers the main requirements but with one or two clear gaps in completeness or depth. Still good work.
+   - 65-75%: WEAK. The criterion is functionally addressed but the work is basic, shallow, or has multiple gaps. The minimum band for any real attempt.
+   - 50-64%: SIGNIFICANT GAPS. The criterion is touched but not really fulfilled. Most sub-requirements missing.
+   - Below 50%: MISSING / BROKEN. Use ONLY when you genuinely cannot find anything relevant in the submission for this criterion, or what's there is fundamentally wrong.
 
-   ANCHORING RULES (read carefully):
-   - If a learner imports the right libraries, makes a real attempt at the criterion, and produces working code — they're at MINIMUM in the 60-74% band, more likely 75-89%.
-   - Do NOT penalize "could be more thorough" by dropping a band. A submission that does the basics correctly is SOLID (75-89%), not partial.
-   - Do NOT confuse "I, the grader, would have done it differently" with a real gap. The criterion either is or isn't addressed.
-   - Most competent submissions across all criteria should average 70-85% overall. If your overall is below 60%, you are probably being too harsh — re-scan the submission.
+   ANCHORING RULES (read carefully — these override your default instincts):
+   - If a learner imports the right libraries, makes a real attempt at the criterion, and produces working code — they're at MINIMUM in the 65-75% band. Almost always 75-85% or higher.
+   - A submission that does the basics of the criterion correctly is COMPETENT (85-100%), not strong. "Strong" is the next tier DOWN.
+   - Do NOT penalize "could be more thorough" or "I would have used a different approach" — those are not real gaps.
+   - Most submissions across all criteria should average 80%+ overall. If your overall is below 70%, you are being TOO HARSH — re-read the submission and look for things you under-credited.
+   - The lowest band (<50%) is RARE. Use it only when the criterion really is absent.
 
-   Pick the SPECIFIC integer that reflects quality. A solid-but-not-comprehensive submission is 11/14 (78%), not 10/14 or 12/14. Use every integer. Differentiate clearly between strong and weak submissions.
+   Pick the SPECIFIC integer that reflects quality. A competent submission is 12-14 out of 14 (86-100%). A strong one is 11/14 (79%). Use every integer. Differentiate clearly between submissions — but the differentiation happens INSIDE the bands, not by collapsing decent work into the bottom.
 
-4. DIFFERENTIATE BETWEEN SUBMISSIONS — but stay within the bands above. Different submissions of clearly different quality should receive clearly different scores, but the differentiation happens WITHIN the band system, not by collapsing weak work into the bottom.
-   - A submission with comprehensive EDA (multiple visualizations, statistical tests, feature engineering) vs one with the basic plots needed for the task — the comprehensive one might be 13/14 (93%), the basic one 11/14 (78%). Both are SOLID; one is exceptional.
-   - A tuned-and-compared model vs a single default model — maybe 12/14 (86%) vs 10/14 (71%). Differentiation present, but neither is failing.
-   - Only collapse to the lower bands (40-59%, 0-39%) when there's a REAL gap, not just "less impressive than the best version".
+4. DIFFERENTIATE BETWEEN SUBMISSIONS — but stay within the generous bands above. Different submissions of clearly different quality should receive clearly different scores, but the differentiation happens WITHIN the band system.
+   - A submission with comprehensive EDA (multiple visualizations, statistical tests, feature engineering) vs one with the basic plots needed for the task — the comprehensive one is 14/14 (100%), the basic one 12/14 (86%). Both are COMPETENT; one is exceptional.
+   - A tuned-and-compared model vs a single default model — maybe 13/14 (93%) vs 11/14 (79%). Differentiation present, both are good.
+   - Only collapse to the lower bands (below 65%) when there's a REAL gap (the work doesn't actually address the criterion), not "less impressive than the best version".
 
 5. SCORE EVIDENCE. Your feedback paragraph for each criterion must reference SPECIFIC things you saw (or didn't see) in the submission — names of libraries, model types, function names, plot types, missing steps. Vague feedback ("the code could be better organized") is not acceptable. If you can't cite specifics, score is too high.
 
