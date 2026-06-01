@@ -50,13 +50,14 @@ export async function generatePDFReport(
   result: EvaluationResult
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    // Bigger bottom margin so the footer text lives INSIDE the usable area —
-    // writing past the bottom margin makes PDFKit's text() auto-paginate,
-    // which was creating one phantom blank page per footer call.
+    // No bufferPages, no manual footer page-numbering. The previous
+    // implementation was writing footer text past the bottom margin which
+    // tripped PDFKit's auto-paginator and added phantom blank pages. PDF
+    // viewers (Drive, Adobe, Preview) all render their own page indicator,
+    // so we don't need our own.
     const doc = new PDFDocument({
       size: "A4",
-      margins: { top: 35, bottom: 50, left: 40, right: 40 },
-      bufferPages: true,
+      margins: { top: 35, bottom: 35, left: 40, right: 40 },
       info: {
         Title: `Evaluation Report - ${result.submissionName}`,
         Author: "Project Evaluator",
@@ -78,31 +79,13 @@ export async function generatePDFReport(
     doc.addPage();
     renderPage2(doc, result, pageWidth);
 
-    // Page 3 — Interviewer feedback
-    doc.addPage();
-    renderPage3(doc, result, pageWidth);
-
-    // Footer page numbers. CRITICAL: y must be inside the usable area
-    // (page.height - bottomMargin) and lineBreak:false prevents PDFKit
-    // from auto-paginating, which was the phantom-page bug.
-    const totalPages = doc.bufferedPageRange().count;
-    for (let i = 0; i < totalPages; i++) {
-      doc.switchToPage(i);
-      doc
-        .fontSize(7)
-        .fillColor(COLORS.muted)
-        .text(
-          `Page ${i + 1} of ${totalPages}`,
-          40,
-          doc.page.height - 38,
-          {
-            align: "center",
-            width: pageWidth,
-            lineBreak: false,
-          }
-        );
+    // Page 3 — Interviewer feedback. Only explicitly add it if there's
+    // genuinely a feedback paragraph to render — empty interviewer feedback
+    // shouldn't claim its own page.
+    if (result.interviewerFeedback?.trim()) {
+      doc.addPage();
+      renderPage3(doc, result, pageWidth);
     }
-    doc.flushPages();
 
     doc.end();
   });
