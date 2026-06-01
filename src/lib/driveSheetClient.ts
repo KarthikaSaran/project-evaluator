@@ -1,0 +1,259 @@
+/**
+ * Client-side parsing/updating of a "Drive Links Sheet" — an xlsx where each row
+ * contains a Google Drive URL pointing to a single submission file.
+ *
+ * Auto-detects:
+ *   - Drive link column (header match, with URL-sniff fallback)
+ *   - Identifier column (name/email/id-like header)
+ *   - Existing Status / Score columns (created fresh if missing)
+ *
+ * Rows are skipped (won't be re-evaluated) when their existing Status indicates
+ * a successful prior run — "Evaluation done", "Complete", "Success", etc.
+ * Failure statuses (No drive access, Folder not supported, ...) DO get re-tried.
+ */
+
+import * as XLSX from "xlsx";
+
+export interface DriveSheetColumns {
+  linkCol: string;
+  idCol: string | null;
+  statusCol: string;
+  scoreCol: string;
+  statusColIsNew: boolean;
+  scoreColIsNew: boolean;
+}
+
+export interface DriveSheetRow {
+  rowIndex: number; // 0-based index into data rows
+  identifier: string;
+  driveLink: string;
+  currentStatus: string;
+  shouldSkip: boolean;
+  skipReason?: string;
+}
+
+export interface ParsedDriveSheet {
+  workbook: XLSX.WorkBook;
+  sheetName: string;
+  headers: string[];
+  rowData: Record<string, unknown>[];
+  columns: DriveSheetColumns;
+  rows: DriveSheetRow[];
+}
+
+// "Done" / "Evaluation done" / "Complete" / "Success" — anything matching means SKIP
+const SUCCESS_STATUS_PATTERNS = [
+  /evaluation\s*done/i,
+  /\bdone\b/i,
+  /\bcomplete/i,
+  /\bevaluated\b/i,
+  /\bsuccess/i,
+];
+
+function looksLikeSuccessStatus(s: string): boolean {
+  const trimmed = s.trim();
+  if (!trimmed) return false;
+  return SUCCESS_STATUS_PATTERNS.some((p) => p.test(trimmed));
+}
+
+function looksLikeDriveUrl(v: string): boolean {
+  return /drive\.google\.com|colab\.research\.google\.com|docs\.google\.com/i.test(
+    v
+  );
+}
+
+export function parseDriveSheet(buffer: ArrayBuffer): ParsedDriveSheet {
+  const workbook = XLSX.read(buffer, { type: "array" });
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) {
+    throw new Error("The uploaded file has no sheets.");
+  }
+  const sheet = workbook.Sheets[sheetName];
+
+  const rowData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+    defval: "",
+  });
+
+  if (rowData.length === 0) {
+    throw new Error("The first sheet has no data rows.");
+  }
+
+  const headers = Object.keys(rowData[0]);
+
+  // --- Detect Drive link column ---------------------------------------------
+  let linkCol =
+    headers.find((h) =>
+      /(drive|colab|submission|github)\s*(link|url)?|^link$|^url$/i.test(h)
+    ) || "";
+
+  if (!linkCol) {
+    // Fallback: pick the column whose cells most look like Drive URLs
+    let bestCol = "";
+    let bestHits = 0;
+    const sampleSize = Math.min(20, rowData.length);
+    for (const h of headers) {
+      const hits = rowData
+        .slice(0, sampleSize)
+        .filter((r) => looksLikeDriveUrl(String(r[h] || "")))
+        .length;
+      if (hits > bestHits) {
+        bestHits = hits;
+        bestCol = h;
+      }
+    }
+    if (bestHits >= Math.max(1, Math.floor(sampleSize / 3))) {
+      linkCol = bestCol;
+    }
+  }
+
+  if (!linkCol) {
+    throw new Error(
+      "Could not detect a Drive link column. Add a column like 'Drive Link' or 'Submission URL' with Google Drive URLs."
+    );
+  }
+
+  // --- Detect identifier column --------------------------------------------
+  let idCol =
+    headers.find((h) =>
+      /^(name|full\s*name|email|e-?mail|id|student|learner|user|candidate|roll)/i.test(
+        h
+      )
+    ) || null;
+  if (!idCol) {
+    idCol =
+      headers.find(
+        (h) => h !== linkCol && !/status|score|%|percent/i.test(h)
+      ) || null;
+  }
+
+  // --- Detect existing Status / Score columns ------------------------------
+  const existingStatus = headers.find((h) => /^status$|\bstatus\b/i.test(h));
+  const existingScore = headers.find(
+    (h) => /^score$|\bscore\b|\bpercent|%$/i.test(h)
+  );
+
+  const columns: DriveSheetColumns = {
+    linkCol,
+    idCol,
+    statusCol: existingStatus || "Status",
+    scoreCol: existingScore || "Score",
+    statusColIsNew: !existingStatus,
+    scoreColIsNew: !existingScore,
+  };
+
+  // --- Build per-row spec ---------------------------------------------------
+  const rows: DriveSheetRow[] = rowData.map((r, idx) => {
+    const identifier = idCol
+      ? String(r[idCol] || `Row ${idx + 2}`).trim() || `Row ${idx + 2}`
+      : `Row ${idx + 2}`;
+    const driveLink = String(r[linkCol] || "").trim();
+    const currentStatus = existingStatus
+      ? String(r[existingStatus] || "").trim()
+      : "";
+
+    let shouldSkip = false;
+    let skipReason: string | undefined;
+    if (looksLikeSuccessStatus(currentStatus)) {
+      shouldSkip = true;
+      skipReason = "Already evaluated";
+    } else if (!driveLink) {
+      shouldSkip = true;
+      skipReason = "No Drive link in this row";
+    }
+
+    return {
+      rowIndex: idx,
+      identifier,
+      driveLink,
+      currentStatus,
+      shouldSkip,
+      skipReason,
+    };
+  });
+
+  return {
+    workbook,
+    sheetName,
+    headers,
+    rowData,
+    columns,
+    rows,
+  };
+}
+
+export interface RowUpdate {
+  rowIndex: number;
+  status: string;
+  score?: string; // formatted like "87%"
+}
+
+/**
+ * Build an updated workbook with Status (and Score where available) filled in.
+ * Preserves all other columns and any extra sheets the workbook had.
+ */
+export function buildUpdatedWorkbook(
+  parsed: ParsedDriveSheet,
+  updates: RowUpdate[]
+): ArrayBuffer {
+  const { workbook, sheetName, rowData, columns, headers } = parsed;
+
+  const updateByIndex = new Map<number, RowUpdate>();
+  for (const u of updates) updateByIndex.set(u.rowIndex, u);
+
+  const updatedRows = rowData.map((r, idx) => {
+    const newRow: Record<string, unknown> = { ...r };
+    const u = updateByIndex.get(idx);
+
+    // Make sure score & status columns exist on every row so json_to_sheet emits them
+    if (!(columns.scoreCol in newRow)) newRow[columns.scoreCol] = "";
+    if (!(columns.statusCol in newRow)) newRow[columns.statusCol] = "";
+
+    if (u) {
+      newRow[columns.statusCol] = u.status;
+      if (u.score !== undefined) {
+        newRow[columns.scoreCol] = u.score;
+      }
+    }
+    return newRow;
+  });
+
+  // Preserve original column order, append new Score/Status if they weren't present
+  const finalHeaders = [...headers];
+  if (!finalHeaders.includes(columns.scoreCol)) {
+    finalHeaders.push(columns.scoreCol);
+  }
+  if (!finalHeaders.includes(columns.statusCol)) {
+    finalHeaders.push(columns.statusCol);
+  }
+
+  const newSheet = XLSX.utils.json_to_sheet(updatedRows, {
+    header: finalHeaders,
+  });
+
+  const newWorkbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(newWorkbook, newSheet, sheetName);
+
+  // Copy any other sheets unchanged
+  for (const name of workbook.SheetNames) {
+    if (name !== sheetName) {
+      XLSX.utils.book_append_sheet(newWorkbook, workbook.Sheets[name], name);
+    }
+  }
+
+  return XLSX.write(newWorkbook, {
+    type: "array",
+    bookType: "xlsx",
+  }) as ArrayBuffer;
+}
+
+export function safeFilenameFromIdentifier(
+  identifier: string,
+  rowIndex: number
+): string {
+  const clean = identifier
+    .replace(/[^a-zA-Z0-9_\-\s]/g, "")
+    .replace(/\s+/g, "_")
+    .slice(0, 60);
+  if (!clean) return `Row_${rowIndex + 2}`;
+  return clean;
+}
