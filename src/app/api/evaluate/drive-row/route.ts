@@ -18,12 +18,16 @@ interface RequestBody {
   category: ProjectCategory;
   projectId?: string;
   identifier?: string;
+  /** Submitter's email from the sheet's email column. When present and valid,
+      becomes the report's submissionName so the PDF (filename + cover page)
+      is identified by email everywhere. */
+  email?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as RequestBody;
-    const { driveLink, category, projectId, identifier } = body;
+    const { driveLink, category, projectId, identifier, email } = body;
 
     if (!driveLink) {
       return NextResponse.json(
@@ -113,7 +117,14 @@ export async function POST(request: NextRequest) {
       projectId || undefined
     );
 
-    if (identifier) {
+    // Use the email as the submission name when present — that way the PDF
+    // cover page AND the download filename are both identified by email,
+    // matching the Drive upload / ZIP / email-attachment filenames.
+    const validEmail =
+      email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+    if (validEmail) {
+      evaluation.submissionName = validEmail;
+    } else if (identifier) {
       evaluation.submissionName = identifier;
     }
 

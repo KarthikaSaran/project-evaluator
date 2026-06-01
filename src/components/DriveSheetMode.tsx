@@ -160,6 +160,7 @@ export default function DriveSheetMode({
             category,
             projectId: projectId || undefined,
             identifier: row.identifier,
+            email: row.email || undefined,
           }),
         });
         const data = await response.json();
@@ -299,8 +300,12 @@ export default function DriveSheetMode({
             });
             if (!pdfResp.ok) continue;
             const pdfBuf = await pdfResp.arrayBuffer();
+            // submissionName is now email when available; fall back to
+            // identifier match for rows without an email.
             const rp = finalRowProgress.find(
-              (r) => r.identifier === result.submissionName
+              (r) =>
+                (r.email && r.email === result.submissionName) ||
+                r.identifier === result.submissionName
             );
             const baseName = reportFilenameBase(
               rp?.email || null,

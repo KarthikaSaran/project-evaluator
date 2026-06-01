@@ -265,9 +265,15 @@ export default function Home() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Evaluation_Report_${result.submissionName
-        .replace(/[^a-zA-Z0-9_-]/g, "_")
-        .slice(0, 50)}.pdf`;
+      // If submissionName is an email, use it directly (Drive / Gmail / OS
+      // file systems all support @ and dots in filenames). Otherwise sanitise.
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result.submissionName);
+      const baseName = isEmail
+        ? result.submissionName
+        : `Evaluation_Report_${result.submissionName
+            .replace(/[^a-zA-Z0-9_-]/g, "_")
+            .slice(0, 50)}`;
+      a.download = `${baseName}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
