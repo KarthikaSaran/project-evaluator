@@ -1,6 +1,17 @@
 import PDFDocument from "pdfkit";
 import { EvaluationResult, EvaluationSection, CATEGORY_LABELS } from "./types";
 
+/**
+ * Compact PDF layout — targets 4-5 pages for a typical 7-criterion evaluation,
+ * even for 13-criterion capstone rubrics. The previous design used a 200-300px
+ * card per criterion; this version packs each criterion into ~90px.
+ *
+ * Page 1 — Cover (full bleed, score circle)
+ * Page 2 — Score bar + summary + compact per-criterion breakdown
+ * Page 3 — Strengths/weaknesses side-by-side + Scope for Improvement + Bonus
+ * Page 4 — Interviewer feedback + disclaimer
+ */
+
 const COLORS = {
   primary: "#1a365d",
   secondary: "#2b6cb0",
@@ -44,7 +55,7 @@ export async function generatePDFReport(
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
-      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      margins: { top: 40, bottom: 40, left: 45, right: 45 },
       bufferPages: true,
       info: {
         Title: `Evaluation Report - ${result.submissionName}`,
@@ -58,54 +69,43 @@ export async function generatePDFReport(
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    const pageWidth = doc.page.width - 100;
+    const pageWidth = doc.page.width - 90;
 
+    // Page 1
     renderCoverPage(doc, result, pageWidth);
+
+    // Page 2 — summary + per-criterion compact list
     doc.addPage();
+    renderSummaryAndBreakdown(doc, result, pageWidth);
 
-    renderScoreSummary(doc, result, pageWidth);
+    // Page 3 — strengths/weaknesses/scope/bonus
+    doc.addPage();
+    renderOverview(doc, result, pageWidth);
 
-    renderSectionEvaluations(doc, result, pageWidth);
-
-    renderProsAndCons(doc, result, pageWidth);
-
-    renderScopeForImprovement(doc, result, pageWidth);
-
-    if (result.bonusPoints.details.length > 0) {
-      renderBonusPoints(doc, result, pageWidth);
-    }
-
+    // Page 4 — interviewer feedback
+    doc.addPage();
     renderInterviewerFeedback(doc, result, pageWidth);
 
+    // Footer (page X of Y) on every page that exists
     const totalPages = doc.bufferedPageRange().count;
     for (let i = 0; i < totalPages; i++) {
       doc.switchToPage(i);
       doc
-        .fontSize(8)
-        .fillColor(COLORS.muted)
+        .fontSize(7)
+        .fillColor(i === 0 ? "#a0aec0" : COLORS.muted)
         .text(
           `Page ${i + 1} of ${totalPages}`,
-          50,
-          doc.page.height - 30,
+          45,
+          doc.page.height - 25,
           { align: "center", width: pageWidth }
         );
-
-      if (i > 0) {
-        doc
-          .fontSize(7)
-          .fillColor(COLORS.muted)
-          .text(
-            "Project Evaluator | Confidential",
-            50,
-            doc.page.height - 30,
-            { align: "right", width: pageWidth }
-          );
-      }
     }
 
     doc.end();
   });
 }
+
+// ============================================================ Page 1 — Cover
 
 function renderCoverPage(
   doc: PDFKit.PDFDocument,
@@ -113,481 +113,425 @@ function renderCoverPage(
   pageWidth: number
 ) {
   doc.rect(0, 0, doc.page.width, doc.page.height).fill(COLORS.primary);
-
   doc.rect(0, 0, doc.page.width, 8).fill(COLORS.accent);
 
-  doc.y = 180;
+  doc.y = 170;
   doc
-    .fontSize(32)
+    .fontSize(28)
     .fillColor(COLORS.white)
-    .text("PROJECT EVALUATION", 50, doc.y, {
+    .text("PROJECT EVALUATION", 45, doc.y, {
       align: "center",
       width: pageWidth,
     });
 
   doc.moveDown(0.3);
-  doc.fontSize(16).text("REPORT", 50, doc.y, {
+  doc.fontSize(14).text("REPORT", 45, doc.y, {
     align: "center",
     width: pageWidth,
   });
 
-  doc.moveDown(2);
+  doc.moveDown(1.5);
   doc
-    .moveTo(doc.page.width / 2 - 60, doc.y)
-    .lineTo(doc.page.width / 2 + 60, doc.y)
+    .moveTo(doc.page.width / 2 - 50, doc.y)
+    .lineTo(doc.page.width / 2 + 50, doc.y)
     .strokeColor(COLORS.accent)
     .lineWidth(2)
     .stroke();
 
-  doc.moveDown(2);
-  doc.fontSize(14).fillColor("#bee3f8").text(result.detectedProject, 50, doc.y, {
-    align: "center",
-    width: pageWidth,
-  });
-
-  doc.moveDown(1);
+  doc.moveDown(1.5);
   doc
-    .fontSize(11)
+    .fontSize(13)
+    .fillColor("#bee3f8")
+    .text(result.detectedProject, 45, doc.y, {
+      align: "center",
+      width: pageWidth,
+    });
+
+  doc.moveDown(0.6);
+  doc
+    .fontSize(10)
     .fillColor("#a0aec0")
     .text(
       `Category: ${CATEGORY_LABELS[result.category] || result.category}`,
-      50,
+      45,
       doc.y,
       { align: "center", width: pageWidth }
     );
 
-  doc.moveDown(3);
+  doc.moveDown(2.5);
 
+  // Score circle
   const scoreColor = getScoreColor(result.percentageScore);
   const cx = doc.page.width / 2;
-  const cy = doc.y + 50;
-  const radius = 45;
+  const cy = doc.y + 45;
+  const radius = 42;
 
-  doc.circle(cx, cy, radius).lineWidth(4).strokeColor(scoreColor).stroke();
+  doc.circle(cx, cy, radius).lineWidth(3).strokeColor(scoreColor).stroke();
 
   doc
-    .fontSize(28)
+    .fontSize(26)
     .fillColor(COLORS.white)
-    .text(`${result.percentageScore}%`, cx - 35, cy - 18, {
+    .text(`${result.percentageScore}%`, cx - 35, cy - 16, {
       width: 70,
       align: "center",
     });
 
   doc
-    .fontSize(9)
+    .fontSize(8)
     .fillColor("#a0aec0")
     .text("OVERALL", cx - 35, cy + 14, { width: 70, align: "center" });
 
-  doc.y = cy + radius + 30;
+  doc.y = cy + radius + 22;
   doc
     .fontSize(10)
     .fillColor("#a0aec0")
     .text(
-      `Score: ${result.overallScore} / ${result.maxPossibleScore} | Rating: ${result.overallRating}`,
-      50,
+      `Score: ${result.overallScore} / ${result.maxPossibleScore}  |  Rating: ${result.overallRating}`,
+      45,
       doc.y,
       { align: "center", width: pageWidth }
     );
 
-  doc.y = doc.page.height - 120;
+  doc.y = doc.page.height - 100;
   doc
-    .fontSize(10)
+    .fontSize(9)
     .fillColor("#a0aec0")
-    .text(`Submission: ${result.submissionName}`, 50, doc.y, {
+    .text(`Submission: ${result.submissionName}`, 45, doc.y, {
       align: "center",
       width: pageWidth,
     });
-  doc.moveDown(0.5);
+  doc.moveDown(0.4);
   doc.text(
-    `Evaluated: ${new Date(result.timestamp).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`,
-    50,
+    `Evaluated: ${new Date(result.timestamp).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })}`,
+    45,
     doc.y,
     { align: "center", width: pageWidth }
   );
 }
 
-function renderScoreSummary(
+// ====================================================== Page 2 — Breakdown
+
+function renderSummaryAndBreakdown(
   doc: PDFKit.PDFDocument,
   result: EvaluationResult,
   pageWidth: number
 ) {
-  renderSectionHeader(doc, "SCORE SUMMARY", pageWidth);
-  doc.moveDown(0.5);
+  // Title
+  sectionTitle(doc, "Evaluation Summary", pageWidth);
 
+  // Score bar
   doc
-    .fontSize(10)
-    .fillColor(COLORS.text)
-    .text(result.summary, 50, doc.y, { width: pageWidth });
-  doc.moveDown(1);
+    .fontSize(9)
+    .fillColor(COLORS.muted)
+    .text(
+      `Overall  ·  ${result.overallScore} / ${result.maxPossibleScore} (${result.percentageScore}%)  ·  ${result.overallRating}  ·  Bonus ${result.bonusPoints.score}/${result.bonusPoints.maxScore}`,
+      45,
+      doc.y,
+      { width: pageWidth }
+    );
+  doc.moveDown(0.4);
 
-  const colWidth = pageWidth / 4;
-  const startY = doc.y;
-
-  const metrics = [
-    {
-      label: "Overall Score",
-      value: `${result.overallScore}/${result.maxPossibleScore}`,
-    },
-    { label: "Percentage", value: `${result.percentageScore}%` },
-    { label: "Rating", value: result.overallRating },
-    {
-      label: "Bonus Points",
-      value: `${result.bonusPoints.score}/${result.bonusPoints.maxScore}`,
-    },
-  ];
-
-  metrics.forEach((m, i) => {
-    const x = 50 + i * colWidth;
-    doc
-      .rect(x + 2, startY, colWidth - 4, 50)
-      .fillAndStroke(COLORS.lightBg, COLORS.border);
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.muted)
-      .text(m.label, x + 10, startY + 10, { width: colWidth - 20 });
-    doc
-      .fontSize(14)
-      .fillColor(COLORS.primary)
-      .text(m.value, x + 10, startY + 26, {
-        width: colWidth - 20,
-      });
-  });
-
-  doc.y = startY + 60;
-  doc.moveDown(0.5);
-
-  renderScoreBar(doc, result, pageWidth);
-}
-
-function renderScoreBar(
-  doc: PDFKit.PDFDocument,
-  result: EvaluationResult,
-  pageWidth: number
-) {
-  const barHeight = 14;
-  const startX = 50;
-  const y = doc.y;
-
-  doc.rect(startX, y, pageWidth, barHeight).fill("#e2e8f0");
-
-  const fillWidth = (result.percentageScore / 100) * pageWidth;
-  const color = getScoreColor(result.percentageScore);
-  doc.rect(startX, y, fillWidth, barHeight).fill(color);
-
+  // Score bar visualization
+  const barH = 8;
+  const barY = doc.y;
+  doc.rect(45, barY, pageWidth, barH).fill("#e2e8f0");
   doc
-    .fontSize(8)
-    .fillColor(COLORS.white)
-    .text(`${result.percentageScore}%`, startX + 5, y + 2, {
-      width: fillWidth - 10,
-    });
+    .rect(45, barY, (result.percentageScore / 100) * pageWidth, barH)
+    .fill(getScoreColor(result.percentageScore));
+  doc.y = barY + barH + 10;
 
-  doc.y = y + barHeight + 15;
-}
+  // Executive summary
+  if (result.summary?.trim()) {
+    doc
+      .fontSize(9)
+      .fillColor(COLORS.text)
+      .text(result.summary.trim(), 45, doc.y, { width: pageWidth });
+    doc.moveDown(0.6);
+  }
 
-function renderSectionEvaluations(
-  doc: PDFKit.PDFDocument,
-  result: EvaluationResult,
-  pageWidth: number
-) {
-  renderSectionHeader(doc, "DETAILED EVALUATION", pageWidth);
+  // Per-criterion breakdown — compact card per section
+  sectionTitle(doc, "Criterion-by-Criterion Breakdown", pageWidth);
 
   result.sections.forEach((section, index) => {
-    // Only break a page if the header literally won't fit. Section bodies
-    // auto-flow across pages as needed.
-    checkPageBreak(doc, 60);
-    renderEvaluationSection(doc, section, index + 1, pageWidth);
+    renderCompactSection(doc, section, index + 1, pageWidth);
   });
 }
 
-function renderEvaluationSection(
+function renderCompactSection(
   doc: PDFKit.PDFDocument,
   section: EvaluationSection,
   index: number,
   pageWidth: number
 ) {
-  doc.moveDown(0.5);
+  // ~85-110px per section
+  // Row 1: name + score, rating badge
+  // Row 2: feedback (3-4 lines)
+  // Row 3-N: combined inline strengths (+ ...) / issues (- ... → fix: ...)
 
-  const headerY = doc.y;
-  doc.rect(50, headerY, pageWidth, 28).fill(COLORS.sectionBg);
-
-  doc
-    .fontSize(11)
-    .fillColor(COLORS.primary)
-    .text(`${index}. ${section.criterionName}`, 58, headerY + 7, {
-      width: pageWidth - 120,
-    });
-
+  const startY = doc.y;
   const ratingColor = getRatingColor(section.rating);
-  const scoreText = `${section.score}/${section.maxScore} - ${section.rating}`;
+
+  // Side accent bar based on rating
+  doc.rect(45, startY, 3, 16).fill(ratingColor);
+
+  // Header line
   doc
     .fontSize(10)
-    .fillColor(ratingColor)
-    .text(scoreText, 50, headerY + 8, {
-      width: pageWidth - 8,
-      align: "right",
+    .fillColor(COLORS.primary)
+    .text(`${index}. ${section.criterionName}`, 55, startY + 1, {
+      width: pageWidth - 110,
     });
-
-  doc.y = headerY + 34;
-
-  const pct = section.maxScore > 0 ? (section.score / section.maxScore) * 100 : 0;
-  const barY = doc.y;
-  doc.rect(50, barY, pageWidth, 6).fill("#e2e8f0");
-  doc
-    .rect(50, barY, (pct / 100) * pageWidth, 6)
-    .fill(getScoreColor(pct));
-  doc.y = barY + 12;
 
   doc
     .fontSize(9)
-    .fillColor(COLORS.text)
-    .text(section.feedback, 58, doc.y, { width: pageWidth - 16 });
-  doc.moveDown(0.5);
+    .fillColor(ratingColor)
+    .text(
+      `${section.score}/${section.maxScore}  ${section.rating}`,
+      45,
+      startY + 2,
+      { width: pageWidth, align: "right" }
+    );
 
-  if (section.strengths.length > 0) {
-    checkPageBreak(doc, 40);
-    doc.fontSize(9).fillColor(COLORS.success).text("Strengths:", 58, doc.y);
+  doc.y = startY + 18;
+
+  // Feedback
+  if (section.feedback?.trim()) {
+    doc
+      .fontSize(8.5)
+      .fillColor(COLORS.text)
+      .text(section.feedback.trim(), 55, doc.y, { width: pageWidth - 10 });
     doc.moveDown(0.2);
-    section.strengths.forEach((s) => {
-      doc
-        .fontSize(8)
-        .fillColor(COLORS.text)
-        .text(`  +  ${s}`, 66, doc.y, { width: pageWidth - 24 });
-      doc.moveDown(0.15);
-    });
   }
 
+  // Strengths — inline, no header
+  if (section.strengths.length > 0) {
+    const text = section.strengths.map((s) => `+ ${s}`).join("    ");
+    doc
+      .fontSize(7.5)
+      .fillColor(COLORS.success)
+      .text(text, 55, doc.y, { width: pageWidth - 10 });
+    doc.moveDown(0.15);
+  }
+
+  // Shortcomings with paired suggestion — compact "- issue → fix"
   if (section.shortcomings.length > 0) {
-    checkPageBreak(doc, 40);
-    doc.moveDown(0.3);
-    doc.fontSize(9).fillColor(COLORS.danger).text("Areas to Improve:", 58, doc.y);
-    doc.moveDown(0.2);
     section.shortcomings.forEach((sc) => {
+      doc
+        .fontSize(7.5)
+        .fillColor(COLORS.danger)
+        .text(`- ${sc.issue}`, 55, doc.y, { width: pageWidth - 10 });
+      if (sc.suggestion?.trim()) {
+        doc
+          .fontSize(7.5)
+          .fillColor(COLORS.accent)
+          .text(`  → ${sc.suggestion}`, 60, doc.y, {
+            width: pageWidth - 15,
+          });
+      }
+    });
+    doc.moveDown(0.1);
+  }
+
+  // Thin separator
+  doc.moveDown(0.15);
+  doc
+    .moveTo(55, doc.y)
+    .lineTo(45 + pageWidth - 10, doc.y)
+    .lineWidth(0.4)
+    .strokeColor("#e2e8f0")
+    .stroke();
+  doc.moveDown(0.25);
+}
+
+// ====================================================== Page 3 — Overview
+
+function renderOverview(
+  doc: PDFKit.PDFDocument,
+  result: EvaluationResult,
+  pageWidth: number
+) {
+  // Strengths & weaknesses side-by-side
+  if (result.pros.length > 0 || result.cons.length > 0) {
+    sectionTitle(doc, "Overall Strengths & Areas for Growth", pageWidth);
+
+    const colW = (pageWidth - 14) / 2;
+    const startY = doc.y;
+
+    // Strengths column
+    doc.rect(45, startY, colW, 20).fill(COLORS.success);
+    doc
+      .fontSize(9)
+      .fillColor(COLORS.white)
+      .text("STRENGTHS", 53, startY + 5, { width: colW - 16 });
+
+    let pY = startY + 26;
+    result.pros.forEach((pro) => {
       doc
         .fontSize(8)
         .fillColor(COLORS.text)
-        .text(`  -  ${sc.issue}`, 66, doc.y, { width: pageWidth - 24 });
-      doc.moveDown(0.1);
+        .text(`+ ${pro}`, 53, pY, { width: colW - 16 });
+      pY = doc.y + 3;
+    });
+
+    // Weaknesses column
+    doc.rect(45 + colW + 14, startY, colW, 20).fill(COLORS.danger);
+    doc
+      .fontSize(9)
+      .fillColor(COLORS.white)
+      .text("AREAS FOR GROWTH", 53 + colW + 14, startY + 5, {
+        width: colW - 16,
+      });
+
+    let cY = startY + 26;
+    doc.y = cY;
+    result.cons.forEach((con) => {
       doc
         .fontSize(8)
-        .fillColor(COLORS.accent)
-        .text(`     Suggestion: ${sc.suggestion}`, 66, doc.y, {
-          width: pageWidth - 24,
-        });
+        .fillColor(COLORS.text)
+        .text(`- ${con.issue}`, 53 + colW + 14, cY, { width: colW - 16 });
+      cY = doc.y + 1;
+      if (con.suggestion?.trim()) {
+        doc
+          .fontSize(7.5)
+          .fillColor(COLORS.accent)
+          .text(`  → ${con.suggestion}`, 53 + colW + 14, cY, {
+            width: colW - 16,
+          });
+        cY = doc.y + 4;
+      } else {
+        cY += 4;
+      }
+    });
+
+    doc.y = Math.max(pY, cY) + 6;
+  }
+
+  // Scope for Improvement
+  if (result.scopeForImprovement.length > 0) {
+    doc.moveDown(0.4);
+    sectionTitle(doc, "Scope for Improvement", pageWidth);
+    result.scopeForImprovement.forEach((item, idx) => {
+      const y = doc.y;
+      doc.circle(54, y + 4, 6).fillAndStroke(COLORS.accent, COLORS.accent);
+      doc
+        .fontSize(7)
+        .fillColor(COLORS.white)
+        .text(`${idx + 1}`, 50, y + 1, { width: 8, align: "center" });
+      doc
+        .fontSize(8.5)
+        .fillColor(COLORS.text)
+        .text(item, 65, y, { width: pageWidth - 25 });
       doc.moveDown(0.2);
     });
   }
 
-  doc.moveDown(0.5);
-  doc
-    .moveTo(70, doc.y)
-    .lineTo(50 + pageWidth - 20, doc.y)
-    .strokeColor("#e2e8f0")
-    .lineWidth(0.5)
-    .stroke();
-  doc.moveDown(0.3);
-}
-
-function renderProsAndCons(
-  doc: PDFKit.PDFDocument,
-  result: EvaluationResult,
-  pageWidth: number
-) {
-  checkPageBreak(doc, 100);
-  renderSectionHeader(doc, "STRENGTHS & WEAKNESSES", pageWidth);
-
-  const halfWidth = (pageWidth - 10) / 2;
-
-  const prosStartY = doc.y;
-
-  doc
-    .rect(50, prosStartY, halfWidth, 24)
-    .fill(COLORS.success);
-  doc
-    .fontSize(10)
-    .fillColor(COLORS.white)
-    .text("STRENGTHS", 58, prosStartY + 6, { width: halfWidth - 16 });
-
-  let prosY = prosStartY + 30;
-  result.pros.forEach((pro) => {
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.text)
-      .text(`+  ${pro}`, 58, prosY, { width: halfWidth - 16 });
-    prosY = doc.y + 6;
-  });
-
-  doc
-    .rect(50 + halfWidth + 10, prosStartY, halfWidth, 24)
-    .fill(COLORS.danger);
-  doc
-    .fontSize(10)
-    .fillColor(COLORS.white)
-    .text("AREAS FOR GROWTH", 58 + halfWidth + 10, prosStartY + 6, {
-      width: halfWidth - 16,
-    });
-
-  let consY = prosStartY + 30;
-  doc.y = consY;
-  result.cons.forEach((con) => {
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.text)
-      .text(`-  ${con.issue}`, 58 + halfWidth + 10, consY, {
-        width: halfWidth - 16,
-      });
-    consY = doc.y + 2;
-    doc
-      .fontSize(7)
-      .fillColor(COLORS.accent)
-      .text(`   Fix: ${con.suggestion}`, 58 + halfWidth + 10, consY, {
-        width: halfWidth - 16,
-      });
-    consY = doc.y + 6;
-  });
-
-  doc.y = Math.max(prosY, consY) + 10;
-}
-
-function renderScopeForImprovement(
-  doc: PDFKit.PDFDocument,
-  result: EvaluationResult,
-  pageWidth: number
-) {
-  if (result.scopeForImprovement.length === 0) return;
-  checkPageBreak(doc, 80);
-  renderSectionHeader(doc, "SCOPE FOR IMPROVEMENT", pageWidth);
-
-  result.scopeForImprovement.forEach((item, idx) => {
-    checkPageBreak(doc, 20);
-    const y = doc.y;
-    doc
-      .circle(62, y + 5, 8)
-      .fillAndStroke(COLORS.accent, COLORS.accent);
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.white)
-      .text(`${idx + 1}`, 57, y + 2, { width: 10, align: "center" });
-    doc
-      .fontSize(9)
-      .fillColor(COLORS.text)
-      .text(item, 78, y, { width: pageWidth - 36 });
-    doc.moveDown(0.5);
-  });
-}
-
-function renderBonusPoints(
-  doc: PDFKit.PDFDocument,
-  result: EvaluationResult,
-  pageWidth: number
-) {
-  checkPageBreak(doc, 80);
-  renderSectionHeader(doc, "BONUS POINTS & CREATIVITY", pageWidth);
-
-  doc
-    .fontSize(11)
-    .fillColor(COLORS.success)
-    .text(
-      `Bonus Score: ${result.bonusPoints.score} / ${result.bonusPoints.maxScore} points`,
-      50,
-      doc.y,
-      { width: pageWidth }
-    );
-  doc.moveDown(0.5);
-
-  result.bonusPoints.details.forEach((detail) => {
-    checkPageBreak(doc, 40);
-    const y = doc.y;
-    doc
-      .fontSize(9)
-      .fillColor(COLORS.primary)
-      .text(`${detail.feature} (+${detail.points} pts)`, 58, y, {
-        width: pageWidth - 16,
-      });
-    doc.moveDown(0.15);
-    doc
-      .fontSize(8)
-      .fillColor(COLORS.muted)
-      .text(detail.comment, 66, doc.y, { width: pageWidth - 24 });
+  // Bonus points
+  if (result.bonusPoints.details.length > 0) {
     doc.moveDown(0.4);
-  });
+    sectionTitle(
+      doc,
+      `Bonus Points & Creativity (+${result.bonusPoints.score}/${result.bonusPoints.maxScore})`,
+      pageWidth
+    );
+    result.bonusPoints.details.forEach((detail) => {
+      doc
+        .fontSize(8.5)
+        .fillColor(COLORS.primary)
+        .text(`${detail.feature}  (+${detail.points} pts)`, 55, doc.y, {
+          width: pageWidth - 10,
+        });
+      if (detail.comment?.trim()) {
+        doc
+          .fontSize(8)
+          .fillColor(COLORS.muted)
+          .text(detail.comment, 62, doc.y, { width: pageWidth - 17 });
+      }
+      doc.moveDown(0.2);
+    });
+  }
 }
+
+// ====================================================== Page 4 — Feedback
 
 function renderInterviewerFeedback(
   doc: PDFKit.PDFDocument,
   result: EvaluationResult,
   pageWidth: number
 ) {
-  if (!result.interviewerFeedback?.trim()) return;
-  checkPageBreak(doc, 100);
-  renderSectionHeader(doc, "INTERVIEWER FEEDBACK", pageWidth);
-  doc.moveDown(0.3);
+  sectionTitle(doc, "Interviewer Feedback", pageWidth);
 
-  // Per-paragraph accent bar avoids the previous cross-page rect bug where a
-  // single tall rect drawn from feedbackY to currentY would extend past the
-  // visible page when paragraphs spilled over a page boundary.
-  const paragraphs = result.interviewerFeedback.split("\n").filter(Boolean);
-  paragraphs.forEach((p) => {
-    checkPageBreak(doc, 40);
-    const startY = doc.y;
+  const paragraphs = (result.interviewerFeedback || "")
+    .split("\n")
+    .filter(Boolean);
+
+  if (paragraphs.length === 0) {
     doc
       .fontSize(9)
-      .fillColor(COLORS.text)
-      .text(p.trim(), 62, startY, { width: pageWidth - 20 });
-    const endY = doc.y;
-    // Side accent bar for THIS paragraph only — always lives on one page.
-    doc.rect(50, startY, 3, Math.max(8, endY - startY)).fill(COLORS.accent);
-    doc.moveDown(0.4);
-  });
-
-  // Disclaimer flows on whatever page we're on — we don't force a break
-  // here, since that's the empty-trailing-page bug. If it really won't fit,
-  // PDFKit's text wrapper auto-paginates the disclaimer text anyway.
-  doc.moveDown(0.6);
-  if (doc.y + 50 < doc.page.height - 50) {
-    doc
-      .moveTo(50, doc.y)
-      .lineTo(50 + pageWidth, doc.y)
-      .strokeColor(COLORS.accent)
-      .lineWidth(1)
-      .stroke();
-    doc.moveDown(0.4);
+      .fillColor(COLORS.muted)
+      .text("(No interviewer feedback was returned for this evaluation.)", 55, doc.y, {
+        width: pageWidth - 10,
+      });
+  } else {
+    paragraphs.forEach((p) => {
+      const startY = doc.y;
+      doc
+        .fontSize(9.5)
+        .fillColor(COLORS.text)
+        .text(p.trim(), 55, startY, {
+          width: pageWidth - 10,
+          align: "justify",
+        });
+      const endY = doc.y;
+      // Per-paragraph accent bar (no cross-page bug)
+      doc
+        .rect(45, startY, 3, Math.max(10, endY - startY))
+        .fill(COLORS.accent);
+      doc.moveDown(0.5);
+    });
   }
 
+  doc.moveDown(1);
   doc
-    .fontSize(8)
+    .moveTo(45, doc.y)
+    .lineTo(45 + pageWidth, doc.y)
+    .strokeColor(COLORS.accent)
+    .lineWidth(0.8)
+    .stroke();
+  doc.moveDown(0.4);
+  doc
+    .fontSize(7.5)
     .fillColor(COLORS.muted)
     .text(
       "This report was generated by Project Evaluator using AI-powered analysis. " +
-        "Scores and feedback are meant to guide learning and improvement. " +
-        "For questions about this evaluation, please contact your program coordinator.",
-      50,
+        "Scores and feedback are intended to guide learning and improvement. " +
+        "For questions about this evaluation, please reach out to your program coordinator.",
+      45,
       doc.y,
       { align: "center", width: pageWidth }
     );
 }
 
-function renderSectionHeader(
+// ============================================================== helpers
+
+function sectionTitle(
   doc: PDFKit.PDFDocument,
   title: string,
   pageWidth: number
 ) {
-  doc.moveDown(0.5);
-  const y = doc.y;
   doc
-    .moveTo(50, y)
-    .lineTo(50 + pageWidth, y)
+    .moveTo(45, doc.y)
+    .lineTo(45 + pageWidth, doc.y)
     .strokeColor(COLORS.primary)
-    .lineWidth(2)
+    .lineWidth(1.5)
     .stroke();
+  doc.moveDown(0.3);
+  doc
+    .fontSize(12)
+    .fillColor(COLORS.primary)
+    .text(title.toUpperCase(), 45, doc.y, { width: pageWidth });
   doc.moveDown(0.4);
-  doc.fontSize(13).fillColor(COLORS.primary).text(title, 50, doc.y, {
-    width: pageWidth,
-  });
-  doc.moveDown(0.5);
-}
-
-function checkPageBreak(doc: PDFKit.PDFDocument, requiredSpace: number) {
-  if (doc.y + requiredSpace > doc.page.height - 60) {
-    doc.addPage();
-  }
 }

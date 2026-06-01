@@ -681,14 +681,6 @@ export default function DriveSheetMode({
                   )}
                 </div>
 
-                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-800">
-                  <strong>Heads up:</strong> emails to submitters are
-                  <em> not</em> sent automatically. After the evaluation
-                  finishes, you&apos;ll review the results and explicitly
-                  click &ldquo;Send Reports&rdquo; — so nothing customer-facing
-                  goes out unverified.
-                </div>
-
                 <RowList rows={rowProgress} emailEnabled={false} />
 
                 {error && (
@@ -783,70 +775,6 @@ export default function DriveSheetMode({
                   </div>
                 </div>
 
-                {/* Verify-then-email panel */}
-                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-800">
-                      Step 2: Send PDF reports to submitters
-                    </h3>
-                    <span className="text-[10px] uppercase tracking-wide text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
-                      Verify first
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    Review the score and the report PDFs above. Nothing has
-                    been sent to candidates yet. When you&apos;re confident the
-                    evaluations look right, click below to email each row&apos;s
-                    PDF to its submitter from your Google account.
-                  </p>
-                  {(() => {
-                    const sendable = rowProgress.filter(
-                      (r) => r.state === "success" && r.email
-                    ).length;
-                    const missingEmail = rowProgress.filter(
-                      (r) => r.state === "success" && !r.email
-                    ).length;
-                    return (
-                      <div className="text-xs text-gray-600 space-y-1">
-                        <div>
-                          • {sendable} report{sendable !== 1 ? "s" : ""} ready
-                          to email
-                        </div>
-                        {missingEmail > 0 && (
-                          <div className="text-amber-700">
-                            • {missingEmail} successful row
-                            {missingEmail !== 1 ? "s" : ""} have no email and
-                            will be skipped
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                  <button
-                    type="button"
-                    onClick={handleSendEmails}
-                    disabled={
-                      emailSending ||
-                      emailingDone ||
-                      rowProgress.filter(
-                        (r) => r.state === "success" && r.email
-                      ).length === 0 ||
-                      !authStatus?.signedIn
-                    }
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {emailSending
-                      ? "Sending..."
-                      : emailingDone
-                        ? "Reports sent"
-                        : "Send Reports via Email"}
-                  </button>
-                  {!authStatus?.signedIn && (
-                    <p className="text-xs text-amber-700">
-                      Sign in with Google to enable email sending.
-                    </p>
-                  )}
-                </div>
 
                 {isGoogleSheetSource && (
                   <div
@@ -876,7 +804,7 @@ export default function DriveSheetMode({
                 )}
 
                 <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-3">
-                  <h3 className="font-semibold text-gray-800">Downloads</h3>
+                  <h3 className="font-semibold text-gray-800">Actions</h3>
                   {building && (
                     <p className="text-xs text-gray-500">Building bundle...</p>
                   )}
@@ -902,6 +830,38 @@ export default function DriveSheetMode({
                         Download Updated Sheet (.xlsx)
                       </button>
                     )}
+                    {(() => {
+                      const sendable = rowProgress.filter(
+                        (r) => r.state === "success" && r.email
+                      ).length;
+                      return (
+                        <button
+                          type="button"
+                          onClick={handleSendEmails}
+                          disabled={
+                            emailSending ||
+                            emailingDone ||
+                            sendable === 0 ||
+                            !authStatus?.signedIn
+                          }
+                          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            !authStatus?.signedIn
+                              ? "Sign in with Google first"
+                              : sendable === 0
+                                ? "No rows have an email address to send to"
+                                : "Email PDF reports to submitters via Gmail"
+                          }
+                        >
+                          <EmailIcon />
+                          {emailSending
+                            ? "Sending..."
+                            : emailingDone
+                              ? `Emails sent (${emailedCount})`
+                              : `Email Reports (${sendable})`}
+                        </button>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -1139,6 +1099,19 @@ function DownloadIcon() {
         strokeLinejoin="round"
         strokeWidth={2}
         d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+      />
+    </svg>
+  );
+}
+
+function EmailIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
       />
     </svg>
   );
