@@ -17,15 +17,21 @@ import * as XLSX from "xlsx";
 export interface DriveSheetColumns {
   linkCol: string;
   idCol: string | null;
+  /** Separately-detected email column (used for PDF filenames). May equal idCol. */
+  emailCol: string | null;
   statusCol: string;
   scoreCol: string;
+  /** Header name we'll use for the Report Link column. */
+  reportLinkCol: string;
   statusColIsNew: boolean;
   scoreColIsNew: boolean;
+  reportLinkColIsNew: boolean;
 }
 
 export interface DriveSheetRow {
   rowIndex: number; // 0-based index into data rows
   identifier: string;
+  email: string | null;
   driveLink: string;
   currentStatus: string;
   shouldSkip: boolean;
@@ -112,7 +118,26 @@ export function parseDriveSheet(buffer: ArrayBuffer): ParsedDriveSheet {
     );
   }
 
-  // --- Detect identifier column --------------------------------------------
+  // --- Detect email column (separately, even when identifier is "Name") -----
+  // Prefer columns whose header looks email-y; fall back to a column whose
+  // cells look like email addresses.
+  let emailCol =
+    headers.find((h) => /e-?mail|^mail$/i.test(h)) || null;
+  if (!emailCol) {
+    const sampleSize = Math.min(10, rowData.length);
+    for (const h of headers) {
+      const hits = rowData
+        .slice(0, sampleSize)
+        .filter((r) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(r[h] || "").trim()))
+        .length;
+      if (hits >= Math.max(1, Math.floor(sampleSize / 2))) {
+        emailCol = h;
+        break;
+      }
+    }
+  }
+
+  // --- Detect identifier column (for display) -------------------------------
   let idCol =
     headers.find((h) =>
       /^(name|full\s*name|email|e-?mail|id|student|learner|user|candidate|roll)/i.test(
@@ -122,23 +147,29 @@ export function parseDriveSheet(buffer: ArrayBuffer): ParsedDriveSheet {
   if (!idCol) {
     idCol =
       headers.find(
-        (h) => h !== linkCol && !/status|score|%|percent/i.test(h)
+        (h) => h !== linkCol && !/status|score|%|percent|report/i.test(h)
       ) || null;
   }
 
-  // --- Detect existing Status / Score columns ------------------------------
+  // --- Detect existing Status / Score / Report Link columns ----------------
   const existingStatus = headers.find((h) => /^status$|\bstatus\b/i.test(h));
   const existingScore = headers.find(
     (h) => /^score$|\bscore\b|\bpercent|%$/i.test(h)
+  );
+  const existingReportLink = headers.find((h) =>
+    /report\s*link|pdf\s*link|report\s*url/i.test(h)
   );
 
   const columns: DriveSheetColumns = {
     linkCol,
     idCol,
+    emailCol,
     statusCol: existingStatus || "Status",
     scoreCol: existingScore || "Score",
+    reportLinkCol: existingReportLink || "Report Link",
     statusColIsNew: !existingStatus,
     scoreColIsNew: !existingScore,
+    reportLinkColIsNew: !existingReportLink,
   };
 
   // --- Build per-row spec ---------------------------------------------------
@@ -146,6 +177,7 @@ export function parseDriveSheet(buffer: ArrayBuffer): ParsedDriveSheet {
     const identifier = idCol
       ? String(r[idCol] || `Row ${idx + 2}`).trim() || `Row ${idx + 2}`
       : `Row ${idx + 2}`;
+    const email = emailCol ? String(r[emailCol] || "").trim() || null : null;
     const driveLink = String(r[linkCol] || "").trim();
     const currentStatus = existingStatus
       ? String(r[existingStatus] || "").trim()
@@ -164,6 +196,7 @@ export function parseDriveSheet(buffer: ArrayBuffer): ParsedDriveSheet {
     return {
       rowIndex: idx,
       identifier,
+      email,
       driveLink,
       currentStatus,
       shouldSkip,
@@ -185,10 +218,11 @@ export interface RowUpdate {
   rowIndex: number;
   status: string;
   score?: string; // formatted like "87%"
+  reportLink?: string;
 }
 
 /**
- * Build an updated workbook with Status (and Score where available) filled in.
+ * Build an updated workbook with Status / Score / Report Link filled in.
  * Preserves all other columns and any extra sheets the workbook had.
  */
 export function buildUpdatedWorkbook(
@@ -204,26 +238,29 @@ export function buildUpdatedWorkbook(
     const newRow: Record<string, unknown> = { ...r };
     const u = updateByIndex.get(idx);
 
-    // Make sure score & status columns exist on every row so json_to_sheet emits them
     if (!(columns.scoreCol in newRow)) newRow[columns.scoreCol] = "";
     if (!(columns.statusCol in newRow)) newRow[columns.statusCol] = "";
+    if (!(columns.reportLinkCol in newRow))
+      newRow[columns.reportLinkCol] = "";
 
     if (u) {
       newRow[columns.statusCol] = u.status;
-      if (u.score !== undefined) {
-        newRow[columns.scoreCol] = u.score;
-      }
+      if (u.score !== undefined) newRow[columns.scoreCol] = u.score;
+      if (u.reportLink !== undefined)
+        newRow[columns.reportLinkCol] = u.reportLink;
     }
     return newRow;
   });
 
-  // Preserve original column order, append new Score/Status if they weren't present
   const finalHeaders = [...headers];
   if (!finalHeaders.includes(columns.scoreCol)) {
     finalHeaders.push(columns.scoreCol);
   }
   if (!finalHeaders.includes(columns.statusCol)) {
     finalHeaders.push(columns.statusCol);
+  }
+  if (!finalHeaders.includes(columns.reportLinkCol)) {
+    finalHeaders.push(columns.reportLinkCol);
   }
 
   const newSheet = XLSX.utils.json_to_sheet(updatedRows, {
@@ -233,7 +270,6 @@ export function buildUpdatedWorkbook(
   const newWorkbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(newWorkbook, newSheet, sheetName);
 
-  // Copy any other sheets unchanged
   for (const name of workbook.SheetNames) {
     if (name !== sheetName) {
       XLSX.utils.book_append_sheet(newWorkbook, workbook.Sheets[name], name);
@@ -246,6 +282,53 @@ export function buildUpdatedWorkbook(
   }) as ArrayBuffer;
 }
 
+/**
+ * Compute final column indices (0-based) for Status / Score / Report Link in
+ * the underlying spreadsheet. Existing columns keep their position; new ones
+ * get appended at the end in the order [Status, Score, Report Link] (only
+ * those that weren't already present).
+ */
+export function computeSheetUpdateColumns(parsed: ParsedDriveSheet): {
+  statusColIdx: number;
+  scoreColIdx: number;
+  reportLinkColIdx: number;
+  statusIsNew: boolean;
+  scoreIsNew: boolean;
+  reportLinkIsNew: boolean;
+  statusHeader: string;
+  scoreHeader: string;
+  reportLinkHeader: string;
+} {
+  const { headers, columns } = parsed;
+  let cursor = headers.length;
+
+  const statusIsNew = columns.statusColIsNew;
+  const scoreIsNew = columns.scoreColIsNew;
+  const reportLinkIsNew = columns.reportLinkColIsNew;
+
+  const statusColIdx = statusIsNew
+    ? cursor++
+    : headers.indexOf(columns.statusCol);
+  const scoreColIdx = scoreIsNew
+    ? cursor++
+    : headers.indexOf(columns.scoreCol);
+  const reportLinkColIdx = reportLinkIsNew
+    ? cursor++
+    : headers.indexOf(columns.reportLinkCol);
+
+  return {
+    statusColIdx,
+    scoreColIdx,
+    reportLinkColIdx,
+    statusIsNew,
+    scoreIsNew,
+    reportLinkIsNew,
+    statusHeader: columns.statusCol,
+    scoreHeader: columns.scoreCol,
+    reportLinkHeader: columns.reportLinkCol,
+  };
+}
+
 export function safeFilenameFromIdentifier(
   identifier: string,
   rowIndex: number
@@ -256,4 +339,21 @@ export function safeFilenameFromIdentifier(
     .slice(0, 60);
   if (!clean) return `Row_${rowIndex + 2}`;
   return clean;
+}
+
+/**
+ * Build the PDF filename for a row. Prefers the user's email (per requirement),
+ * falls back to the display identifier, and finally to a row number.
+ * Returns a name WITHOUT the .pdf extension.
+ */
+export function reportFilenameBase(
+  email: string | null,
+  identifier: string,
+  rowIndex: number
+): string {
+  if (email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // Drive supports @ in filenames; keep email as-is.
+    return email;
+  }
+  return safeFilenameFromIdentifier(identifier, rowIndex);
 }

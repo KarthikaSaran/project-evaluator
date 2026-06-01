@@ -9,6 +9,8 @@ import GoogleSignIn from "@/components/GoogleSignIn";
 import { ProjectCategory, EvaluationResult } from "@/lib/types";
 import rawProjectData from "@/lib/projectData.json";
 import { parseDriveSheet } from "@/lib/driveSheetClient";
+import { extractSpreadsheetId } from "@/lib/driveUpload";
+import type { SourceSheetMeta } from "@/components/DriveSheetMode";
 
 const ALL_PROJECTS = rawProjectData as Array<{ id: string }>;
 
@@ -25,6 +27,9 @@ export default function Home() {
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [driveSheetFile, setDriveSheetFile] = useState<File | null>(null);
+  const [sourceMeta, setSourceMeta] = useState<SourceSheetMeta>({
+    kind: "upload",
+  });
   const [sheetLink, setSheetLink] = useState("");
   const [fetchingSheet, setFetchingSheet] = useState(false);
 
@@ -103,6 +108,15 @@ export default function Home() {
       try {
         const file = await fetchSheetFromDriveLink(sheetLink.trim());
         inputFiles = [file];
+
+        // If the link pointed to a Google Sheet, remember the spreadsheet ID
+        // so DriveSheetMode can write Score/Status/Report Link back in place.
+        const spreadsheetId = extractSpreadsheetId(sheetLink.trim());
+        setSourceMeta(
+          spreadsheetId
+            ? { kind: "google-sheet", spreadsheetId }
+            : { kind: "upload" }
+        );
       } catch (e) {
         setError(
           e instanceof Error ? e.message : "Could not fetch sheet from Drive"
@@ -111,6 +125,8 @@ export default function Home() {
         return;
       }
       setFetchingSheet(false);
+    } else {
+      setSourceMeta({ kind: "upload" });
     }
 
     // Auto-detect Drive Links Spreadsheet — single .xlsx whose cells look like Drive URLs
@@ -411,6 +427,7 @@ export default function Home() {
             category={category}
             initialFile={driveSheetFile}
             stepNumber={uploadStepNumber}
+            sourceMeta={sourceMeta}
             onReset={handleReset}
           />
         )}

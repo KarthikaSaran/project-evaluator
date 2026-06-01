@@ -17,7 +17,9 @@ import crypto from "crypto";
 import type { NextRequest } from "next/server";
 
 const SCOPES = [
-  "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/drive.readonly", // read submission files
+  "https://www.googleapis.com/auth/drive.file", // create/overwrite report PDFs we upload
+  "https://www.googleapis.com/auth/spreadsheets", // update source Google Sheet in place
   "openid",
   "email",
 ].join(" ");

@@ -8,18 +8,25 @@ import { ProjectCategory, EvaluationResult } from "@/lib/types";
 import {
   parseDriveSheet,
   buildUpdatedWorkbook,
-  safeFilenameFromIdentifier,
+  reportFilenameBase,
+  computeSheetUpdateColumns,
   ParsedDriveSheet,
   RowUpdate,
 } from "@/lib/driveSheetClient";
+
+/** Where the input sheet came from — affects how results are written back. */
+export interface SourceSheetMeta {
+  /** "upload" (downloadable xlsx) or "google-sheet" (we can update in place). */
+  kind: "upload" | "google-sheet";
+  spreadsheetId?: string; // only for google-sheet
+}
 
 interface DriveSheetModeProps {
   category: ProjectCategory;
   projectId?: string;
   stepNumber: number;
-  /** Pre-loaded file from the parent page — auto-runs Inspect on mount. */
   initialFile?: File | null;
-  /** Called when user wants to go back to the upload screen. */
+  sourceMeta?: SourceSheetMeta;
   onReset?: () => void;
 }
 
@@ -28,11 +35,14 @@ type Phase = "upload" | "preview" | "evaluating" | "done";
 interface RowProgress {
   rowIndex: number;
   identifier: string;
+  email: string | null;
   driveLink: string;
   state: "pending" | "running" | "success" | "skipped" | "failed";
   status: string;
   score?: string;
   scorePct?: number;
+  reportLink?: string;
+  uploadError?: string;
   error?: string;
 }
 
@@ -43,6 +53,7 @@ export default function DriveSheetMode({
   projectId,
   stepNumber,
   initialFile,
+  sourceMeta,
   onReset,
 }: DriveSheetModeProps) {
   const [files, setFiles] = useState<File[]>(initialFile ? [initialFile] : []);
@@ -56,9 +67,15 @@ export default function DriveSheetMode({
   const [building, setBuilding] = useState(false);
   const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
 
+  // PDF upload to Drive — optional
+  const [folderUrl, setFolderUrl] = useState("");
+  const [sheetUpdateStatus, setSheetUpdateStatus] = useState<
+    "idle" | "running" | "ok" | "error"
+  >("idle");
+  const [sheetUpdateError, setSheetUpdateError] = useState<string | null>(null);
+
   const previewedRef = useRef(false);
 
-  // Auto-trigger Inspect when the parent hands us a file we haven't parsed yet
   useEffect(() => {
     if (initialFile && !previewedRef.current) {
       previewedRef.current = true;
@@ -77,6 +94,7 @@ export default function DriveSheetMode({
         p.rows.map((r) => ({
           rowIndex: r.rowIndex,
           identifier: r.identifier,
+          email: r.email,
           driveLink: r.driveLink,
           state: r.shouldSkip ? "skipped" : "pending",
           status: r.shouldSkip ? r.skipReason || "Skipped" : "",
@@ -97,11 +115,13 @@ export default function DriveSheetMode({
     await doParse(files[0]);
   };
 
-  // -------------------------------------------------------- run all rows
+  // ------------------------------------------------------- main run loop
   const handleRunAll = async () => {
     if (!parsed) return;
     setError(null);
     setPhase("evaluating");
+
+    const wantsDriveUpload = folderUrl.trim().length > 0;
 
     const newResults: EvaluationResult[] = [];
     const updated: RowProgress[] = rowProgress.map((r) => ({ ...r }));
@@ -129,7 +149,6 @@ export default function DriveSheetMode({
             identifier: row.identifier,
           }),
         });
-
         const data = await response.json();
 
         if (data.ok && data.result) {
@@ -142,6 +161,61 @@ export default function DriveSheetMode({
             score: `${result.percentageScore}%`,
             scorePct: result.percentageScore,
           };
+          setRowProgress([...updated]);
+
+          // Generate PDF and (optionally) upload to Drive — inline so the
+          // sheet update at the end has the report link for this row.
+          let pdfBlob: Blob | null = null;
+          try {
+            const pdfResp = await fetch("/api/generate-report", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ result }),
+            });
+            if (pdfResp.ok) pdfBlob = await pdfResp.blob();
+          } catch {
+            // PDF generation failed — sheet still gets Status/Score
+          }
+
+          if (wantsDriveUpload && pdfBlob) {
+            try {
+              const filenameBase = reportFilenameBase(
+                row.email,
+                row.identifier,
+                row.rowIndex
+              );
+              const filename = `${filenameBase}.pdf`;
+              const base64 = await blobToBase64(pdfBlob);
+              const upResp = await fetch("/api/drive/upload-pdf", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  folderUrl: folderUrl.trim(),
+                  filename,
+                  pdfBase64: base64,
+                }),
+              });
+              const upData = await upResp.json();
+              if (upData.ok && upData.webViewLink) {
+                updated[i] = {
+                  ...updated[i],
+                  reportLink: upData.webViewLink,
+                };
+              } else {
+                updated[i] = {
+                  ...updated[i],
+                  uploadError: upData.error || "Upload failed",
+                };
+              }
+            } catch (e) {
+              updated[i] = {
+                ...updated[i],
+                uploadError:
+                  e instanceof Error ? e.message : "Upload failed",
+              };
+            }
+            setRowProgress([...updated]);
+          }
         } else {
           updated[i] = {
             ...updated[i],
@@ -163,10 +237,16 @@ export default function DriveSheetMode({
 
     setResults(newResults);
     await buildDownloads(updated, newResults);
+
+    // Update the source Google Sheet in place (if input was a Sheet link)
+    if (sourceMeta?.kind === "google-sheet" && sourceMeta.spreadsheetId) {
+      await updateSourceSheet(updated);
+    }
+
     setPhase("done");
   };
 
-  // ----------------------------------------------- build zip + updated xlsx
+  // --------------------------------------------------- build zip + xlsx
   const buildDownloads = async (
     finalRowProgress: RowProgress[],
     finalResults: EvaluationResult[]
@@ -180,15 +260,21 @@ export default function DriveSheetMode({
           rowIndex: r.rowIndex,
           status: r.status,
           score: r.score,
+          reportLink: r.reportLink,
         }));
 
-      const xlsxBuf = buildUpdatedWorkbook(parsed, sheetUpdates);
-      setUpdatedXlsxBlob(
-        new Blob([xlsxBuf], {
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        })
-      );
+      // Only generate a downloadable xlsx for uploaded files (for Google
+      // Sheet input we write back in place via the API instead).
+      if (sourceMeta?.kind !== "google-sheet") {
+        const xlsxBuf = buildUpdatedWorkbook(parsed, sheetUpdates);
+        setUpdatedXlsxBlob(
+          new Blob([xlsxBuf], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          })
+        );
+      }
 
+      // ZIP of PDFs is still useful even when uploading to Drive (offline backup).
       if (finalResults.length > 0) {
         const zip = new JSZip();
         for (const result of finalResults) {
@@ -200,17 +286,17 @@ export default function DriveSheetMode({
             });
             if (!pdfResp.ok) continue;
             const pdfBuf = await pdfResp.arrayBuffer();
-
             const rp = finalRowProgress.find(
               (r) => r.identifier === result.submissionName
             );
-            const baseName = safeFilenameFromIdentifier(
+            const baseName = reportFilenameBase(
+              rp?.email || null,
               result.submissionName,
               rp?.rowIndex ?? 0
             );
-            zip.file(`Evaluation_Report_${baseName}.pdf`, pdfBuf);
+            zip.file(`${baseName}.pdf`, pdfBuf);
           } catch {
-            // skip individual PDF failures
+            // skip individual failures
           }
         }
         const zipBuf = await zip.generateAsync({ type: "blob" });
@@ -223,7 +309,54 @@ export default function DriveSheetMode({
     }
   };
 
-  // -------------------------------------------------------------- downloads
+  // -------------------------------------------- update source Sheet in place
+  const updateSourceSheet = async (finalRowProgress: RowProgress[]) => {
+    if (!parsed || !sourceMeta?.spreadsheetId) return;
+    setSheetUpdateStatus("running");
+    setSheetUpdateError(null);
+    try {
+      const cols = computeSheetUpdateColumns(parsed);
+
+      const updates = finalRowProgress
+        .filter((r) => r.state === "success" || r.state === "failed")
+        .map((r) => ({
+          rowIndex: r.rowIndex,
+          status: r.status,
+          score: r.score,
+          reportLink: r.reportLink,
+        }));
+
+      if (updates.length === 0) {
+        setSheetUpdateStatus("idle");
+        return;
+      }
+
+      const resp = await fetch("/api/sheets/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          spreadsheetId: sourceMeta.spreadsheetId,
+          sheetName: parsed.sheetName,
+          updates,
+          cols,
+        }),
+      });
+      const data = await resp.json();
+      if (!data.ok) {
+        setSheetUpdateStatus("error");
+        setSheetUpdateError(data.error || "Sheet update failed");
+        return;
+      }
+      setSheetUpdateStatus("ok");
+    } catch (e) {
+      setSheetUpdateStatus("error");
+      setSheetUpdateError(
+        e instanceof Error ? e.message : "Sheet update failed"
+      );
+    }
+  };
+
+  // ------------------------------------------------------------ downloads
   const triggerDownload = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -260,6 +393,9 @@ export default function DriveSheetMode({
     setError(null);
     setUpdatedXlsxBlob(null);
     setZipBlob(null);
+    setFolderUrl("");
+    setSheetUpdateStatus("idle");
+    setSheetUpdateError(null);
     previewedRef.current = false;
     onReset?.();
   };
@@ -274,12 +410,19 @@ export default function DriveSheetMode({
   const runningRow = rowProgress.find((r) => r.state === "running");
   const successCount = rowProgress.filter((r) => r.state === "success").length;
   const failedCount = rowProgress.filter((r) => r.state === "failed").length;
+  const uploadedCount = rowProgress.filter((r) => r.reportLink).length;
+  const uploadErrorCount = rowProgress.filter((r) => r.uploadError).length;
 
+  const isGoogleSheetSource = sourceMeta?.kind === "google-sheet";
+  const wantsDriveUpload = folderUrl.trim().length > 0;
+  const needsSignInForUploads = wantsDriveUpload && !authStatus?.signedIn;
+  const needsSignInForSheetUpdate =
+    isGoogleSheetSource && !authStatus?.signedIn;
   const showSignInNudge =
     !!authStatus &&
     authStatus.configured &&
     !authStatus.signedIn &&
-    (phase === "preview" || phase === "upload");
+    (needsSignInForUploads || needsSignInForSheetUpdate || phase === "preview");
 
   // ---------------------------------------------------------------- render
   return (
@@ -293,8 +436,7 @@ export default function DriveSheetMode({
             <p className="text-xs text-gray-500 mb-4">
               An <code className="bg-gray-100 px-1 rounded">.xlsx</code> where each row
               contains a Google Drive link to a single submission file. Auto-detects
-              link / identifier / status / score columns. Folder links and Google Docs
-              are not supported (yet).
+              link / identifier / email / status / score columns.
             </p>
             <FileUpload
               files={files}
@@ -322,184 +464,279 @@ export default function DriveSheetMode({
         </>
       )}
 
-      {(phase === "preview" || phase === "evaluating" || phase === "done") && parsed && (
-        <div className="space-y-6">
-          <SignInBanner show={showSignInNudge} onAuthChange={setAuthStatus} />
+      {(phase === "preview" || phase === "evaluating" || phase === "done") &&
+        parsed && (
+          <div className="space-y-6">
+            <SignInBanner show={showSignInNudge} onAuthChange={setAuthStatus} />
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-800">Sheet Detected</h3>
-              {phase !== "evaluating" && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-800">Sheet Detected</h3>
+                {phase !== "evaluating" && (
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="text-xs text-gray-500 hover:text-gray-800"
+                  >
+                    Upload a different sheet
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <DetectedField label="Sheet" value={parsed.sheetName} />
+                <DetectedField
+                  label="Drive link column"
+                  value={parsed.columns.linkCol}
+                />
+                <DetectedField
+                  label="Identifier column"
+                  value={parsed.columns.idCol || "(none — using row #)"}
+                />
+                <DetectedField
+                  label="Email column"
+                  value={
+                    parsed.columns.emailCol ||
+                    "(none — PDF names use identifier)"
+                  }
+                />
+                <DetectedField
+                  label="Score column"
+                  value={`${parsed.columns.scoreCol}${
+                    parsed.columns.scoreColIsNew ? " (will add)" : ""
+                  }`}
+                />
+                <DetectedField
+                  label="Status column"
+                  value={`${parsed.columns.statusCol}${
+                    parsed.columns.statusColIsNew ? " (will add)" : ""
+                  }`}
+                />
+                <DetectedField
+                  label="Report Link column"
+                  value={`${parsed.columns.reportLinkCol}${
+                    parsed.columns.reportLinkColIsNew ? " (will add)" : ""
+                  }`}
+                />
+                <DetectedField label="To evaluate" value={String(toEvaluate)} />
+              </div>
+              <div className="text-xs text-gray-400 mt-3">
+                {totalRows} rows total · {toSkip} skipped (already done / no link)
+                {isGoogleSheetSource && (
+                  <span className="ml-2 text-blue-600">
+                    · source is a Google Sheet — will write Status / Score /
+                    Report Link back in place
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {phase === "preview" && (
+              <>
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-800">
+                      Upload PDF reports to Drive{" "}
+                      <span className="text-xs font-normal text-gray-400">
+                        (optional)
+                      </span>
+                    </h3>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Paste a Drive folder URL. We&apos;ll upload one PDF per
+                    successful evaluation named after the submitter&apos;s
+                    email. Re-runs overwrite existing files so the Drive URL
+                    stays stable. Needs Google sign-in.
+                  </p>
+                  <input
+                    type="url"
+                    value={folderUrl}
+                    onChange={(e) => setFolderUrl(e.target.value)}
+                    placeholder="https://drive.google.com/drive/folders/..."
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none text-gray-800"
+                  />
+                  {wantsDriveUpload && !authStatus?.signedIn && (
+                    <p className="text-xs text-amber-700">
+                      Sign in with Google to enable uploads.
+                    </p>
+                  )}
+                </div>
+
+                <RowList rows={rowProgress} />
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <p className="text-sm text-red-700">{error}</p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleRunAll}
+                  disabled={toEvaluate === 0}
+                  className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
+                >
+                  Evaluate {toEvaluate} Submission{toEvaluate !== 1 ? "s" : ""}
+                  {toSkip > 0 && (
+                    <span className="opacity-80 font-normal ml-2">
+                      ({toSkip} skipped)
+                    </span>
+                  )}
+                </button>
+              </>
+            )}
+
+            {phase === "evaluating" && (
+              <>
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold text-gray-800">Evaluating...</h3>
+                    <div className="text-xs text-gray-500">
+                      {completed} / {totalRows} processed · {successCount} ok ·{" "}
+                      {failedCount} failed
+                      {wantsDriveUpload && (
+                        <> · {uploadedCount} uploaded</>
+                      )}
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                    <div
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500"
+                      style={{
+                        width: `${
+                          totalRows > 0 ? (completed / totalRows) * 100 : 0
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  {runningRow && (
+                    <p className="text-xs text-gray-500">
+                      Now evaluating:{" "}
+                      <span className="font-medium text-gray-700">
+                        {runningRow.identifier}
+                      </span>
+                    </p>
+                  )}
+                </div>
+
+                <RowList rows={rowProgress} />
+              </>
+            )}
+
+            {phase === "done" && (
+              <>
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                  <h3 className="font-semibold text-gray-800 mb-4">
+                    Evaluation Summary
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                    <StatTile label="Evaluated" value={successCount} tone="success" />
+                    <StatTile label="Failed" value={failedCount} tone="danger" />
+                    <StatTile
+                      label="Skipped"
+                      value={rowProgress.filter((r) => r.state === "skipped").length}
+                      tone="muted"
+                    />
+                    {wantsDriveUpload && (
+                      <StatTile
+                        label="Uploaded to Drive"
+                        value={uploadedCount}
+                        tone={
+                          uploadErrorCount > 0 ? "danger" : "success"
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {isGoogleSheetSource && (
+                  <div
+                    className={`rounded-2xl border p-4 text-sm ${
+                      sheetUpdateStatus === "ok"
+                        ? "bg-green-50 border-green-200 text-green-800"
+                        : sheetUpdateStatus === "error"
+                          ? "bg-red-50 border-red-200 text-red-800"
+                          : "bg-gray-50 border-gray-200 text-gray-700"
+                    }`}
+                  >
+                    {sheetUpdateStatus === "running" && "Updating source Google Sheet..."}
+                    {sheetUpdateStatus === "ok" &&
+                      "Source Google Sheet updated with Score / Status / Report Link."}
+                    {sheetUpdateStatus === "error" && (
+                      <>
+                        Source sheet update failed:{" "}
+                        <span className="font-mono text-xs">
+                          {sheetUpdateError}
+                        </span>
+                      </>
+                    )}
+                    {sheetUpdateStatus === "idle" && (
+                      <>No rows to write back to the source sheet.</>
+                    )}
+                  </div>
+                )}
+
+                <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-3">
+                  <h3 className="font-semibold text-gray-800">Downloads</h3>
+                  {building && (
+                    <p className="text-xs text-gray-500">Building bundle...</p>
+                  )}
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleDownloadZip}
+                      disabled={!zipBlob || building}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
+                    >
+                      <DownloadIcon />
+                      Download PDFs (ZIP) — {successCount} report
+                      {successCount !== 1 ? "s" : ""}
+                    </button>
+                    {!isGoogleSheetSource && (
+                      <button
+                        type="button"
+                        onClick={handleDownloadXlsx}
+                        disabled={!updatedXlsxBlob || building}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      >
+                        <DownloadIcon />
+                        Download Updated Sheet (.xlsx)
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <RowList rows={rowProgress} />
+
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="text-xs text-gray-500 hover:text-gray-800"
+                  className="w-full py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50"
                 >
-                  Upload a different sheet
+                  Start a New Sheet
                 </button>
-              )}
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <DetectedField label="Sheet" value={parsed.sheetName} />
-              <DetectedField
-                label="Drive link column"
-                value={parsed.columns.linkCol}
-              />
-              <DetectedField
-                label="Identifier column"
-                value={parsed.columns.idCol || "(none — using row #)"}
-              />
-              <DetectedField
-                label="Score column"
-                value={`${parsed.columns.scoreCol}${
-                  parsed.columns.scoreColIsNew ? " (will add)" : ""
-                }`}
-              />
-              <DetectedField
-                label="Status column"
-                value={`${parsed.columns.statusCol}${
-                  parsed.columns.statusColIsNew ? " (will add)" : ""
-                }`}
-              />
-              <DetectedField label="Total rows" value={String(totalRows)} />
-              <DetectedField label="To evaluate" value={String(toEvaluate)} />
-              <DetectedField
-                label="To skip (already done / no link)"
-                value={String(toSkip)}
-              />
-            </div>
+              </>
+            )}
           </div>
-
-          {phase === "preview" && (
-            <>
-              <RowList rows={rowProgress} />
-
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={handleRunAll}
-                disabled={toEvaluate === 0}
-                className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200"
-              >
-                Evaluate {toEvaluate} Submission{toEvaluate !== 1 ? "s" : ""}
-                {toSkip > 0 && (
-                  <span className="opacity-80 font-normal ml-2">
-                    ({toSkip} skipped)
-                  </span>
-                )}
-              </button>
-            </>
-          )}
-
-          {phase === "evaluating" && (
-            <>
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-800">Evaluating...</h3>
-                  <div className="text-xs text-gray-500">
-                    {completed} / {totalRows} processed · {successCount} ok ·{" "}
-                    {failedCount} failed
-                  </div>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-                  <div
-                    className="bg-gradient-to-r from-blue-600 to-indigo-600 h-2 rounded-full transition-all duration-500"
-                    style={{
-                      width: `${
-                        totalRows > 0 ? (completed / totalRows) * 100 : 0
-                      }%`,
-                    }}
-                  />
-                </div>
-                {runningRow && (
-                  <p className="text-xs text-gray-500">
-                    Now evaluating:{" "}
-                    <span className="font-medium text-gray-700">
-                      {runningRow.identifier}
-                    </span>
-                  </p>
-                )}
-              </div>
-
-              <RowList rows={rowProgress} />
-            </>
-          )}
-
-          {phase === "done" && (
-            <>
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-                <h3 className="font-semibold text-gray-800 mb-4">
-                  Evaluation Summary
-                </h3>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <StatTile label="Evaluated" value={successCount} tone="success" />
-                  <StatTile label="Failed" value={failedCount} tone="danger" />
-                  <StatTile
-                    label="Skipped"
-                    value={
-                      rowProgress.filter((r) => r.state === "skipped").length
-                    }
-                    tone="muted"
-                  />
-                </div>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm space-y-3">
-                <h3 className="font-semibold text-gray-800">Downloads</h3>
-                {building && (
-                  <p className="text-xs text-gray-500">Building bundle...</p>
-                )}
-                <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={handleDownloadZip}
-                    disabled={!zipBlob || building}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
-                  >
-                    <DownloadIcon />
-                    Download PDFs (ZIP) — {successCount} report
-                    {successCount !== 1 ? "s" : ""}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDownloadXlsx}
-                    disabled={!updatedXlsxBlob || building}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50"
-                  >
-                    <DownloadIcon />
-                    Download Updated Sheet (.xlsx)
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Re-upload the updated sheet next time — rows marked &ldquo;
-                  {SUCCESS_STATUS}&rdquo; will be skipped, and any failed/blank rows
-                  will be re-tried.
-                </p>
-              </div>
-
-              <RowList rows={rowProgress} />
-
-              <button
-                type="button"
-                onClick={handleReset}
-                className="w-full py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50"
-              >
-                Start a New Sheet
-              </button>
-            </>
-          )}
-        </div>
-      )}
+        )}
     </div>
   );
 }
 
-// ------------------------------------------------------------------- subviews
+// ----------------------------------------------------------------- helpers
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer();
+  let binary = "";
+  const bytes = new Uint8Array(buf);
+  // Chunk to avoid stack overflow on large arrays
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+// ----------------------------------------------------------------- subviews
 
 function SignInBanner({
   show,
@@ -515,8 +752,8 @@ function SignInBanner({
       } bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3`}
     >
       <div className="text-sm text-amber-800">
-        Drive links shared with the <strong>@interviewkickstart.com</strong> domain need
-        sign-in. Public &ldquo;Anyone with the link&rdquo; files work without it.
+        Sign in with Google to access domain-restricted Drive links, upload
+        report PDFs, and update Google Sheets in place.
       </div>
       <GoogleSignIn onChange={onAuthChange} compact />
     </div>
@@ -576,6 +813,9 @@ function RowList({ rows }: { rows: RowProgress[] }) {
               <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-600 uppercase">
                 Score
               </th>
+              <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-600 uppercase">
+                Report
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -587,6 +827,11 @@ function RowList({ rows }: { rows: RowProgress[] }) {
                 <td className="px-4 py-2 text-gray-500">{r.rowIndex + 2}</td>
                 <td className="px-4 py-2 text-gray-800 max-w-xs truncate">
                   {r.identifier}
+                  {r.email && r.email !== r.identifier && (
+                    <span className="block text-[10px] text-gray-400 truncate">
+                      {r.email}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-2">
                   <StatusBadge state={r.state} text={r.status || "—"} />
@@ -598,6 +843,24 @@ function RowList({ rows }: { rows: RowProgress[] }) {
                 </td>
                 <td className="px-4 py-2 text-right font-medium text-gray-700">
                   {r.score || "—"}
+                </td>
+                <td className="px-4 py-2 text-xs">
+                  {r.reportLink ? (
+                    <a
+                      href={r.reportLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline truncate inline-block max-w-[200px] align-bottom"
+                    >
+                      Open
+                    </a>
+                  ) : r.uploadError ? (
+                    <span className="text-red-500 truncate inline-block max-w-[200px]">
+                      Upload err
+                    </span>
+                  ) : (
+                    <span className="text-gray-300">—</span>
+                  )}
                 </td>
               </tr>
             ))}
