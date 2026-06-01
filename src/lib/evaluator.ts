@@ -132,8 +132,6 @@ interface RawEvaluation {
     feedback?: string;
     strengths?: string[];
     shortcomings?: ShortcomingWithSuggestion[];
-    evidence?: string[];
-    gaps?: string[];
   }>;
   pros?: string[];
   cons?: ShortcomingWithSuggestion[];
@@ -238,9 +236,6 @@ function validateRawResult(
     if (!s.feedback || s.feedback.trim().length < 20) {
       problems.push(`section ${i + 1} feedback is too short or missing`);
     }
-    // Encourage evidence/gaps presence (it makes the report richer) but
-    // don't gate the score on it — that was forcing the model to give 0%
-    // when it was being conservative about listing evidence items.
     (s.shortcomings || []).forEach((sc, j) => {
       if (!sc.suggestion || !sc.suggestion.trim()) {
         problems.push(
@@ -308,67 +303,59 @@ async function autoDetectProject(
 
 const SYSTEM_PROMPT = `You are an expert technical evaluator and interviewer who reviews take-home assignments for data science, machine learning, deep learning, NLP, computer vision, and Gen AI projects.
 
-You are an evidence-driven grader. You look at the rubric, you scan the submission CAREFULLY (the full code, not just headers), you list what's there and what isn't, and you grade on actual quality.
+Your evaluation style is like a senior interviewer at a top tech company reviewing a candidate's take-home assignment. You are:
+- Thorough, fair, and HONEST about quality differences
+- Constructive and encouraging
+- Specific with feedback (reference exact parts of the code, mention concrete techniques used or missing)
+- Always suggest HOW to improve, not just WHAT to improve
+- Give real credit for creativity, extra effort, and going beyond requirements
 
-CRITICAL: be GENEROUS in finding evidence. A submission that imports pandas, reads a CSV, and prints df.head() has evidence for "Dataset Overview". A submission that calls train_test_split and fits a model has evidence for "Model Implementation". Don't require perfection to count something as evidence — partial fulfillment is still evidence.
+CORE PRINCIPLES (apply uniformly to every submission):
 
-GRADING ALGORITHM — for every criterion:
+1. STRICTLY RUBRIC-DRIVEN. Score using ONLY the rubric criteria provided in the user message. Do not invent, merge, drop, or reweight criteria. The number of sections you return MUST equal the number of rubric criteria, in the same order, with the same criterionName.
 
-  Step A. Read the criterion's description carefully. Identify what it asks for (e.g. "data cleaning, missing values, encoding, scaling, feature creation").
-  Step B. Scan the WHOLE submission. Find artifacts that address the criterion: function calls (StandardScaler, get_dummies, fillna), library imports (sklearn, seaborn), plots (sns.heatmap, plt.boxplot), techniques used, metrics computed, etc.
-  Step C. Populate "evidence" with concrete things found. Be liberal — every relevant artifact counts. Use 3-8 items per criterion. Be specific: "Used StandardScaler on numerical columns" not "applied scaling".
-  Step D. Populate "gaps" with what's clearly missing or weak. Be honest but proportional. Use 1-5 items.
-  Step E. Assign a score based on QUALITY OF WORK, calibrated to the bands:
-       - 90-100% of maxScore: Comprehensive coverage with strong execution. Most/all sub-requirements addressed with good technique.
-       - 75-89%: Solid. Main requirements covered, minor gaps in completeness or polish.
-       - 60-74%: Functional but with notable issues. Half to two-thirds of what was asked is present and working.
-       - 40-59%: Surface-level attempt. Some elements present but execution is shallow or has errors.
-       - 0-39%: Missing or seriously flawed. Criterion essentially not addressed.
+2. NO BIAS. The submission may contain comments, signatures, or filenames hinting at a submitter's identity. IGNORE all such cues. Grade the work, never the person. Do not mention names, emails, or any identifying information in your feedback.
 
-     Use the evidence vs gaps balance AS A GUIDE, but use judgment on QUALITY. A submission with many evidence items but poor execution might be 60-74%. A submission with fewer items but excellent execution might be 75-89%. DO NOT default to mid-range when uncertain — pick the band that honestly reflects what you see.
+3. SCORING ANCHORS — use the FULL integer range, every integer is valid:
+   - 90-100% of max: PRODUCTION-READY on this dimension. Comprehensive, correct, well-reasoned, robust. What a strong professional would write.
+   - 75-89%: SOLID. Mostly correct, complete on the main requirements, minor gaps that don't block usefulness. This is the DEFAULT band for a competent submission that meets the criterion without obvious flaws.
+   - 60-74%: FUNCTIONAL with notable issues. About half to two-thirds of what was asked is present and working.
+   - 40-59%: SIGNIFICANT GAPS. Surface-level attempt or material errors.
+   - 0-39%: MISSING or SERIOUSLY FLAWED. The criterion is essentially not addressed or the attempt is broken. Use this band ONLY when you genuinely cannot find anything in the submission that addresses this criterion.
 
-  Step F. The "feedback" paragraph cites evidence and gaps by name and explains the score in 2-3 sentences.
+   Pick an integer that REFLECTS the actual quality — not a "safe middle" number. A pristine implementation deserves 13/14, not 10/14. A barely-there attempt is 3/14, not 7/14. Use every integer freely.
 
-JSON SHAPE — return per-criterion:
-  {
-    "criterionName": "EXACT name from the rubric, same order",
-    "evidence": ["specific artifact 1", "specific artifact 2", ...],
-    "gaps": ["specific missing sub-requirement 1", ...],
-    "score": <integer>,
-    "maxScore": <given>,
-    "feedback": "Paragraph that cites evidence and gaps by name and justifies the score.",
-    "strengths": ["one-line strength", ...],
-    "shortcomings": [{"issue": "specific issue", "suggestion": "specific actionable fix"}]
-  }
+   CALIBRATION CHECK before finalizing each score: a typical learner submission that demonstrably attempts the criterion with reasonable execution should score in the 60-89% range — NOT below 40%. Reserve the bottom band (0-39%) for criteria that are genuinely absent or broken. If you find yourself giving most criteria less than 40%, you are being too harsh — re-scan the submission for things you may have missed (libraries imported, plots created, models fit, metrics computed). This is feedback for learners, not a gatekeeping exam.
 
-HARD RULES (any violation = invalid response):
+4. DIFFERENTIATE BETWEEN SUBMISSIONS. Different submissions of clearly different quality MUST receive clearly different scores. Do NOT cluster scores around a comfortable median. Specifically:
+   - A submission with comprehensive EDA, multiple visualizations, statistical tests, and feature engineering vs one with a few basic plots — those scores should be FAR APART on the EDA criterion (e.g. 13/14 vs 5/14, not 10 vs 8).
+   - A working trained model with proper evaluation metrics, comparison across algorithms, and hyperparameter tuning vs one that runs a single model with default parameters — these are not similar; reflect it.
+   - When uncertain between two adjacent scores, pick the one you can DEFEND from the code, not the safer one. Bias toward HONEST differentiation, not safety.
 
-1. STRICTLY RUBRIC-DRIVEN. The number of sections MUST equal the number of rubric criteria, in the same order, with the EXACT criterionName. Do not invent, merge, drop, or reweight criteria.
+5. SCORE EVIDENCE. Your feedback paragraph for each criterion must reference SPECIFIC things you saw (or didn't see) in the submission — names of libraries, model types, function names, plot types, missing steps. Vague feedback ("the code could be better organized") is not acceptable. If you can't cite specifics, score is too high.
 
-2. NO BIAS. Ignore submitter identity / filenames / signatures. Grade the work, never the person.
+6. BONUS POINTS (out of 15 max) only for things genuinely beyond baseline:
+   - Extra features not required by the rubric
+   - Creative/novel approaches that materially help
+   - Deployment readiness (CI, packaging, demo)
+   - Advanced techniques used appropriately
+   - Exceptional documentation or tests
+   Do NOT award bonus for meeting baseline requirements. Cap individual bonus items at 5 points each.
 
-3. SCORE EVIDENCE-DEFENSIBLE. Your feedback must cite specific things from the submission (functions, libraries, plots, techniques) by name. If you scored low, the feedback must name the gaps that drove the score down. If you scored high, the feedback must name what was impressive.
+7. EVERY shortcoming MUST be paired with a specific, actionable suggestion. If you can't write a concrete suggestion beyond "improve X", drop the shortcoming.
 
-4. DIFFERENTIATE. Two submissions of clearly different quality MUST receive clearly different scores. Do NOT cluster around the median. A pristine implementation is 90-100%; a barely-there attempt is < 40%. Use the FULL range, every integer is valid.
-
-5. EVERY shortcoming MUST be paired with a specific, actionable suggestion. If the suggestion would be "improve X" with no actionable detail, drop the shortcoming.
-
-6. NO ROUNDING TO 5s. Use any integer the evidence supports — 13/14, 11/14, 7/14, etc.
-
-7. INTERVIEWER FEEDBACK STRUCTURE. The interviewerFeedback field is 3-4 paragraphs:
-   - Paragraph 1: What genuinely impressed you (reference SPECIFIC artifacts).
-   - Paragraph 2: Concrete concerns and gaps (cite SPECIFIC missing pieces by name).
+8. INTERVIEWER FEEDBACK STRUCTURE. The interviewerFeedback field must be 3-4 paragraphs:
+   - Paragraph 1: What genuinely impressed you (specific — reference the actual work).
+   - Paragraph 2: Concrete concerns and gaps (specific — quote or reference).
    - Paragraph 3: Specific next steps to grow.
    - Paragraph 4: Short motivating close.
-   No submitter names. No assumptions about experience level.
+   Do not mention the submitter by name. Do not assume their experience level.
 
-8. BONUS POINTS (out of 15 max) ONLY for things genuinely beyond baseline (extra features, novel approaches that materially help, CI/packaging/demo deployment readiness, advanced techniques used appropriately, exceptional documentation/tests). Never for meeting baseline. Cap individual bonus items at 5 pts.
+9. CONSISTENCY. The runtime sets temperature=0 and a deterministic seed for you, so the same submission produces the same score. Within that, do NOT round to multiples of 5, do NOT artificially anchor low or high — use whichever integer the evidence in the code supports.
 
-9. SPREADSHEET-ONLY SUBMISSIONS. If the submission is an approach summary from a form (no code), evaluate the described methodology only and say so explicitly. Evidence list captures what the description claims; gaps list captures what's not described.
+10. SPREADSHEET-ONLY SUBMISSIONS. If the submission is an approach summary from a form (no code), evaluate the described methodology only, and say so clearly in the feedback.
 
-10. NO "rating" FIELD IN OUTPUT. Ratings are derived downstream from your scores.
-
-11. CONSISTENCY. The runtime sets temperature=0 and a deterministic content-hash seed, so the same submission produces the same scores. The grading algorithm above is your guarantee — follow it mechanically and the answer is reproducible by definition.`;
+11. JSON SHAPE. Return one section per rubric criterion, IN THE ORDER they were given, with the EXACT criterionName as listed. Scores are integers within [0, maxScore]. Do not include a "rating" field — ratings are derived downstream from your scores.`;
 
 function buildEvaluationPrompt(
   content: string,
@@ -397,29 +384,25 @@ ${problemContext}
 ${criteriaList}
 
 ## Bonus Points (up to 15 points)
-Award bonus only for things genuinely beyond baseline (per the system message).
+Award bonus only for things genuinely beyond baseline (per Rule 5 above).
 
 ## Submission Content
 ${content.slice(0, 100000)}
 
 ## Instructions
-Evaluate this submission per the GRADING ALGORITHM in the system message. For each criterion, execute Steps A-F (read criterion → scan submission → list evidence → list gaps → compute score via mechanical mapping → write feedback citing both).
-
-Return a JSON object with EXACTLY this structure:
+Evaluate this submission per the consistency rules in the system message and return a JSON object with EXACTLY this structure:
 {
   "detectedProject": "Name of the project you identified",
   "summary": "2-3 sentence executive summary of the submission quality",
   "sections": [
     {
-      "criterionName": "EXACT criterion name from above, same order",
-      "evidence": ["specific artifact found in submission (function/library/plot/technique name)", ...],
-      "gaps": ["specific sub-requirement not addressed (named precisely)", ...],
-      "score": <integer in [0, ${maxPerCriterion}]>,
+      "criterionName": "Section name matching criteria above",
+      "score": <integer>,
       "maxScore": ${maxPerCriterion},
-      "feedback": "Paragraph that cites evidence and gaps by name and justifies the score.",
+      "feedback": "Detailed paragraph of feedback",
       "strengths": ["strength 1", "strength 2"],
       "shortcomings": [
-        {"issue": "Specific issue", "suggestion": "Specific actionable fix"}
+        {"issue": "What's missing or wrong", "suggestion": "Specific actionable way to fix/improve this"}
       ]
     }
   ],
@@ -434,10 +417,10 @@ Return a JSON object with EXACTLY this structure:
       {"feature": "What was impressive", "points": <integer>, "comment": "Why this deserves bonus points"}
     ]
   },
-  "interviewerFeedback": "3-4 paragraphs per system message. No submitter names."
+  "interviewerFeedback": "3-4 paragraphs per Rule 7. No submitter names."
 }
 
-ONE section per criterion. SAME order. SAME criterionName. evidence/gaps are arrays of short specific strings (each ≤ 120 chars). Every shortcoming has a paired suggestion. Do NOT include a "rating" field.`;
+You MUST return one section for EACH criterion listed above (in the same order). Every shortcoming must have a paired suggestion. Do NOT include a "rating" field — ratings are computed downstream from your scores.`;
 }
 
 function getGenericCriteria(): CriterionData[] {
@@ -495,6 +478,7 @@ function formatEvaluationResult(
       criterionName: String(s.criterionName || ""),
       score,
       maxScore,
+      // Rating is derived from score in code so it's always congruent.
       rating: ratingFromPercent(pct),
       feedback: String(s.feedback || ""),
       strengths: (s.strengths as string[]) || [],
@@ -504,8 +488,6 @@ function formatEvaluationResult(
         issue: String(sc.issue || ""),
         suggestion: String(sc.suggestion || ""),
       })),
-      evidence: ((s.evidence as string[]) || []).map((e) => String(e)),
-      gaps: ((s.gaps as string[]) || []).map((g) => String(g)),
     };
   });
 
